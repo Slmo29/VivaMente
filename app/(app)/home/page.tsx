@@ -4,7 +4,7 @@ import Link from "next/link";
 import Card from "@/components/ui/card";
 import Btn from "@/components/ui/btn";
 import { useUserStore } from "@/lib/store";
-import { mockEsercizioDelGiorno, mockCategorie, mockProgressiSettimanali, mockSessioniRecenti } from "@/lib/mock-data";
+import { mockEsercizioDelGiorno, mockEsercizioDelGiornoCompletato, mockEsercizioDelGiornoRisultato, mockCategorie, mockProgressiSettimanali, mockSessioniRecenti } from "@/lib/mock-data";
 import { CATEGORIA_COLORS, COLORS } from "@/lib/design-tokens";
 import { AppIcon } from "@/lib/icons";
 import { Timer } from "iconoir-react";
@@ -96,8 +96,16 @@ export default function HomePage() {
     (g) => g.esercizi > 0 && GIORNO_INDEX[g.giorno] <= oggiIndex
   ).length;
   const esercizioGiorno = mockEsercizioDelGiorno;
+  const completato = mockEsercizioDelGiornoCompletato;
+  const risultato = mockEsercizioDelGiornoRisultato;
   const catGiorno = mockCategorie.find((c) => c.id === esercizioGiorno.categoria_id);
   const catColors = catGiorno ? CATEGORIA_COLORS[catGiorno.id] : null;
+
+  function formatTempo(sec: number) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }
 
   return (
     <div className="flex flex-col gap-8 px-4 pt-12">
@@ -110,11 +118,9 @@ export default function HomePage() {
 
       {/* ── Card Streak ─────────────────────────────────────────────── */}
       <div>
-        <div className="flex items-center justify-between">
-          <span style={{ color: "#1891B1", fontWeight: 700, lineHeight: 1.1, fontSize: 32 }}>
-            {giorniCompletati}/7
-          </span>
-          <Link href="/progressi" className="text-sm font-semibold" style={{ color: "#1891B1" }}>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-lg font-bold" style={{ color: COLORS.primary }}>Attività</span>
+          <Link href="/progressi" className="text-sm font-semibold" style={{ color: COLORS.primary }}>
             Vedi storico
           </Link>
         </div>
@@ -126,8 +132,8 @@ export default function HomePage() {
         <h2 className="text-lg font-bold text-ink mb-3">Esercizio del Giorno</h2>
         <Card padding="lg" style={{ backgroundColor: "#FFFFFF" }}>
           {/* ── Header row ── */}
-          <div className="flex items-center justify-between mb-3">
-            {catColors ? (
+          <div className="flex items-center gap-2 mb-3">
+            {catColors && (
               <span
                 className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full"
                 style={{ backgroundColor: catColors.bg, color: catColors.text }}
@@ -135,21 +141,43 @@ export default function HomePage() {
                 <AppIcon name={catGiorno?.icona ?? "brain"} size={14} color={catColors.text} />
                 {catGiorno?.nome}
               </span>
-            ) : <span />}
-            <div className="flex items-center gap-1 text-xs" style={{ color: COLORS.inkMuted }}>
-              <Timer width={14} height={14} strokeWidth={1.5} color={COLORS.inkMuted} />
-              <span>{Math.ceil((esercizioGiorno.durata_stimata ?? 60) / 60)} minuti</span>
-              <span>·</span>
-              <span>Livello {esercizioGiorno.livello}/6</span>
-            </div>
+            )}
+            {completato && (
+              <span className="inline-flex items-center text-xs font-bold px-3 py-1 rounded-full" style={{ backgroundColor: "#DCFCE7", color: "#16A34A" }}>
+                Completato
+              </span>
+            )}
+            {!completato && (
+              <div className="ml-auto flex items-center gap-1 text-xs" style={{ color: COLORS.inkMuted }}>
+                <Timer width={14} height={14} strokeWidth={1.5} color={COLORS.inkMuted} />
+                <span>{Math.ceil((esercizioGiorno.durata_stimata ?? 60) / 60)} minuti</span>
+                <span>·</span>
+                <span>Livello {esercizioGiorno.livello}/6</span>
+              </div>
+            )}
           </div>
           <h3 className="text-lg font-bold text-ink">{esercizioGiorno.titolo}</h3>
-          <p className="text-sm text-ink-muted mt-1 leading-relaxed">{esercizioGiorno.descrizione}</p>
-          <div className="mt-4">
-            <Link href={`/esercizi/${esercizioGiorno.id}`}>
-              <Btn size="default">Inizia ora</Btn>
-            </Link>
-          </div>
+
+          {completato ? (
+            <div className="grid grid-cols-3 gap-2 mt-4">
+              {[
+                { label: "Tempo",       value: formatTempo(risultato.tempo_secondi) },
+                { label: "Precisione",  value: `${risultato.precisione}%` },
+                { label: "Guadagnati",  value: `+${risultato.xp_guadagnati}XP` },
+              ].map((stat) => (
+                <div key={stat.label} className="flex flex-col items-center rounded-lg py-3" style={{ backgroundColor: COLORS.background }}>
+                  <span className="text-base font-bold text-ink">{stat.value}</span>
+                  <span className="text-xs mt-0.5" style={{ color: COLORS.inkMuted }}>{stat.label}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-4">
+              <Link href={`/esercizi/${esercizioGiorno.id}`}>
+                <Btn size="default">Inizia ora</Btn>
+              </Link>
+            </div>
+          )}
         </Card>
       </div>
 
@@ -161,29 +189,37 @@ export default function HomePage() {
             Vedi tutti
           </Link>
         </div>
-        <div className="flex gap-3 overflow-x-auto scrollbar-none -mx-4 px-4 pb-1">
+        <div className="flex flex-col gap-3">
           {mockCategorie.map((cat) => {
             const cc = CATEGORIA_COLORS[cat.id];
             const ultimaSessione = mockSessioniRecenti.find((s) => s.categoria === cat.nome);
             const trendConfig = {
-              crescita: { icon: "↑", label: "In crescita" },
-              stabile:  { icon: "→", label: "Stabile" },
-              calo:     { icon: "↓", label: "In calo" },
+              crescita: { icon: "↑", label: "In crescita", color: "#16A34A" },
+              stabile:  { icon: "─›", label: "Stabile",     color: COLORS.primary },
+              calo:     { icon: "↓", label: "In calo",     color: "#DC2626" },
             };
             const trend = ultimaSessione?.trend ? trendConfig[ultimaSessione.trend] : null;
             return (
-              <Link key={cat.id} href={`/esercizi?categoria=${cat.id}`} className="flex-shrink-0">
+              <Link key={cat.id} href={`/esercizi?categoria=${cat.id}`}>
                 <div
-                  className="w-36 rounded-lg p-4 flex flex-col gap-2"
+                  className="flex items-center gap-4 rounded-xl px-4 py-3"
                   style={{ backgroundColor: cc.bg }}
                 >
-                  <AppIcon name={cat.icona} size={40} color={cc.text} />
-                  <p className="text-base font-bold" style={{ color: cc.text }}>{cat.nome}</p>
-                  {trend && (
-                    <p className="text-xs font-semibold" style={{ color: cc.text }}>
-                      {trend.icon} {trend.label}
-                    </p>
-                  )}
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: cc.text + "22" }}>
+                    <AppIcon name={cat.icona} size={22} color={cc.text} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-base font-bold" style={{ color: cc.text }}>{cat.nome}</p>
+                    {trend && (
+                      <span
+                        className="inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full mt-1"
+                        style={{ backgroundColor: "#FFFFFF", color: trend.color }}
+                      >
+                        {trend.icon}{trend.label}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-lg font-bold" style={{ color: cc.text }}>›</span>
                 </div>
               </Link>
             );

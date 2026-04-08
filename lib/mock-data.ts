@@ -97,6 +97,14 @@ export const mockEsercizi = [
 
 export const mockEsercizioDelGiorno = mockEsercizi[0];
 
+// TODO: in futuro questo verrà da Supabase (sessioni di oggi)
+export const mockEsercizioDelGiornoCompletato = false;
+export const mockEsercizioDelGiornoRisultato = {
+  tempo_secondi: 108,   // 1:48
+  precisione: 92,       // %
+  xp_guadagnati: 25,
+};
+
 // ─── Mock Medaglie ────────────────────────────────────────────────────────────
 export const mockMedaglie = [
   { id: "prima-sfida", nome: "Prima Sfida", icona: "star", descrizione: "Hai completato il tuo primo esercizio!", guadagnata: true, guadagnata_at: "2024-03-20" },
