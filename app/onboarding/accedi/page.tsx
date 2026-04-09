@@ -79,12 +79,12 @@ export default function AccediPage() {
               }
             </p>
           </div>
-          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 8, marginTop: 48 }}>
             <div style={{ backgroundColor: `${COLORS.primary}12`, borderRadius: 10, padding: "10px 14px" }}>
               <p style={{ fontSize: 13, color: "#5A5A72", margin: 0 }}>
                 {tipo === "email"
-                  ? "Ecco come apparirà l'email sul tuo telefono:"
-                  : "Ecco come apparirà l'SMS sul tuo telefono:"}
+                  ? "Ecco come apparirà la tua mail:"
+                  : "Ecco come apparirà il messaggio sul tuo telefono:"}
               </p>
             </div>
             <MagicLinkAnimation canale={animCanale} />

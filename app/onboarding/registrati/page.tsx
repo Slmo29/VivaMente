@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Btn from "@/components/ui/btn";
 import { useUserStore, type CanalNotifica } from "@/lib/store";
@@ -50,6 +50,64 @@ function ToggleGroup({ options, value, onChange }: {
   );
 }
 
+function OrarioSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [aperto, setAperto] = useState(false);
+
+  useEffect(() => {
+    document.body.style.overflow = aperto ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [aperto]);
+
+  return (
+    <div style={{ position: "relative" }}>
+      {aperto && (
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 40 }}
+          onPointerDown={() => setAperto(false)}
+        />
+      )}
+      <button
+        type="button"
+        onPointerDown={() => setAperto((v) => !v)}
+        className="w-full min-h-[56px] rounded-md px-4 text-base bg-white text-ink border-2 transition-colors text-left flex items-center justify-between"
+        style={{ borderColor: aperto ? "#1891B1" : "#E2E8F0", color: value ? "#1A1A2E" : "#5A5A72", position: "relative", zIndex: 41 }}
+      >
+        <span>{value || "Seleziona un orario"}</span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, transition: "transform 0.2s", transform: aperto ? "rotate(180deg)" : "rotate(0deg)" }}>
+          <path d="M4 6l4 4 4-4" stroke="#5A5A72" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {aperto && (
+        <div style={{
+          position: "absolute", bottom: "calc(100% + 4px)", left: 0, right: 0,
+          backgroundColor: "#fff", border: "2px solid #1891B1", borderRadius: 10,
+          boxShadow: "0 -4px 24px rgba(0,0,0,0.12)", zIndex: 50,
+          maxHeight: 240, overflowY: "auto",
+        }}>
+          {ORE.map((o) => (
+            <button
+              key={o}
+              type="button"
+              onPointerDown={() => { onChange(o); setAperto(false); }}
+              className="w-full px-4 text-left text-base"
+              style={{
+                minHeight: 48,
+                backgroundColor: value === o ? `${COLORS.primary}12` : "transparent",
+                color: value === o ? COLORS.primary : "#1A1A2E",
+                fontWeight: value === o ? 600 : 400,
+                borderBottom: "1px solid #F1F5F9",
+              }}
+            >
+              {o}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function OnboardingRegistratiPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -59,26 +117,37 @@ export default function OnboardingRegistratiPage() {
   const [nome, setNome]         = useState("");
   const [telefono, setTel]      = useState("");
   const [email, setEmail]       = useState("");
+  const [emailToccata, setEmailToccata] = useState(false);
   const [promemoria, setPromemoria] = useState<"si" | "no" | null>(null);
   const [canale, setCanale]     = useState<CanalNotifica | null>(null);
-  const [orario, setOrario]     = useState("09:00");
+  const [orario, setOrario]     = useState("");
   const [step, setStep]         = useState<"form" | "magic">("form");
 
   const vuolePromemoria = promemoria === "si";
   const canaleScelto = canale ?? "sms";
 
+  function isEmailValida(v: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
+  const emailObbligatoria = vuolePromemoria && canale === "email";
+  const orarioObbligatorio = vuolePromemoria;
+  const emailErrore = emailObbligatoria && emailToccata && email && !isEmailValida(email);
+  const formValido =
+    !!nome &&
+    !!telefono &&
+    (!emailObbligatoria || (!!email && isEmailValida(email))) &&
+    (!orarioObbligatorio || !!orario);
+
   function handleContinua() {
-    if (nome && telefono) {
-      setUser({
-        nome,
-        telefono,
-        email: email || undefined,
-        canale_notifica: vuolePromemoria ? canaleScelto : undefined,
-        orario_notifica: vuolePromemoria ? orario : undefined,
-        consenso_notifiche: vuolePromemoria,
-      });
-      setStep("magic");
-    }
+    if (!formValido) return;
+    setUser({
+      nome,
+      telefono,
+      email: email || undefined,
+      canale_notifica: vuolePromemoria ? canaleScelto : undefined,
+      orario_notifica: vuolePromemoria ? orario : undefined,
+      consenso_notifiche: vuolePromemoria,
+    });
+    setStep("magic");
   }
 
   function handleSenzaRegistrazione() {
@@ -117,8 +186,8 @@ export default function OnboardingRegistratiPage() {
           {/* Telefono */}
           <div>
             <label className="text-sm font-bold text-ink-secondary block mb-2">Numero di telefono *</label>
-            <input type="tel" value={telefono} onChange={(e) => setTel(e.target.value)}
-              placeholder="+39 333 123 4567" className={inputCls} />
+            <input type="tel" value={telefono} onChange={(e) => setTel(e.target.value.replace(/[^\d\s+\-()]/g, ""))}
+              placeholder="+39 333 123 4567" className={inputCls} inputMode="tel" />
           </div>
 
           {/* Promemoria toggle */}
@@ -147,18 +216,26 @@ export default function OnboardingRegistratiPage() {
               {/* Email condizionale */}
               {canale === "email" && (
                 <div>
-                  <label className="text-sm font-bold text-ink-secondary block mb-2">Email</label>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                    placeholder="tua@email.it" className={inputCls} />
+                  <label className="text-sm font-bold text-ink-secondary block mb-2">Email *</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onBlur={() => setEmailToccata(true)}
+                    placeholder="tua@email.it"
+                    className={inputCls}
+                    style={emailErrore ? { borderColor: "#C62828" } : undefined}
+                  />
+                  {emailErrore && (
+                    <p style={{ fontSize: 12, color: "#C62828", marginTop: 4 }}>Inserisci un indirizzo email valido</p>
+                  )}
                 </div>
               )}
 
               {/* Orario */}
               <div>
-                <label className="text-sm font-bold text-ink-secondary block mb-2">A che ora?</label>
-                <select value={orario} onChange={(e) => setOrario(e.target.value)} className={inputCls + " appearance-none"}>
-                  {ORE.map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
+                <label className="text-sm font-bold text-ink-secondary block mb-2">A che ora? *</label>
+                <OrarioSelect value={orario} onChange={setOrario} />
               </div>
             </>
           )}
@@ -184,14 +261,14 @@ export default function OnboardingRegistratiPage() {
               }
             </p>
           </div>
-          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 8, marginTop: 48 }}>
             <div style={{ backgroundColor: `${COLORS.primary}12`, borderRadius: 10, padding: "10px 14px" }}>
               <p style={{ fontSize: 13, color: "#5A5A72", margin: 0 }}>
                 {canale === "email"
-                  ? "Ecco come apparirà l'email sul tuo telefono:"
+                  ? "Ecco come apparirà la tua mail:"
                   : canale === "whatsapp"
                   ? "Ecco come apparirà il messaggio sul tuo telefono:"
-                  : "Ecco come apparirà l'SMS sul tuo telefono:"}
+                  : "Ecco come apparirà il messaggio sul tuo telefono:"}
               </p>
             </div>
             <MagicLinkAnimation canale={canaleScelto} />
@@ -216,7 +293,7 @@ export default function OnboardingRegistratiPage() {
 
       {/* Bottone fisso — solo nella fase form */}
       {step === "form" && (
-        <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto" style={{ zIndex: 10 }}>
+        <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto" style={{ zIndex: 60 }}>
           {/* Fade gradient sopra il box */}
           <div
             className="pointer-events-none"
@@ -227,12 +304,12 @@ export default function OnboardingRegistratiPage() {
           />
           {/* Box footer opaco */}
           <div className="flex flex-col gap-3 items-center px-5 pb-8 pt-3" style={{ backgroundColor: COLORS.background }}>
-          <Btn size="lg" onClick={handleContinua} disabled={!nome || !telefono}>
+          <Btn size="lg" onClick={handleContinua} disabled={!formValido}>
             Registrati
           </Btn>
           {vuolePromemoria && (
             <p className="text-center" style={{ fontSize: 13, color: COLORS.inkMuted }}>
-              Registrandoti accetti di ricevere il promemoria. Puoi disattivarlo quando vuoi.
+              Registrandoti accetti di ricevere il promemoria.<br />Puoi disattivarlo quando vuoi.
             </p>
           )}
           {!fromLogin && !isGuest && (

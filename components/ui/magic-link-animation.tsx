@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { MessageText, Mail, Whatsapp } from "iconoir-react";
 import { COLORS } from "@/lib/design-tokens";
 
@@ -45,36 +46,57 @@ function channelConfig(canale: MagicLinkCanale) {
 
 export function MagicLinkAnimation({ canale }: { canale: MagicLinkCanale }) {
   const cfg = channelConfig(canale);
+  const msgRef = useRef<HTMLParagraphElement>(null);
+
+  useEffect(() => {
+    if (msgRef.current) {
+      msgRef.current.style.animation = "none";
+      void msgRef.current.offsetHeight; // reflow
+      msgRef.current.style.animation = "";
+    }
+  }, [canale]);
 
   return (
-    <div style={{ width: "100%", display: "flex", justifyContent: "center" }}>
-      <div
-        style={{
-          width: "100%",
-          backgroundColor: cfg.bubbleBg,
-          border: `2px solid ${cfg.bubbleBorder}`,
-          borderRadius: 16,
-          padding: "12px 14px",
-        }}
-      >
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-          <div style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: cfg.headerBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {cfg.headerIcon}
-          </div>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: "0.07em", textTransform: "uppercase" }}>
-            {cfg.headerLabel}
-          </span>
-        </div>
+    <>
+      <style>{`
+        @keyframes fade-in-up {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .magic-message {
+          animation: fade-in-up 0.4s ease-out both;
+        }
+      `}</style>
 
-        {/* Message */}
-        <p style={{ fontSize: 13, color: "#1A1A2E", margin: 0, lineHeight: 1.5 }}>
-          {cfg.messagePrefix && <>{cfg.messagePrefix}{" "}</>}
-          <span style={{ color: cfg.linkColor, textDecoration: "underline", fontWeight: 600 }}>
-            {cfg.messageLinkText}
-          </span>
-        </p>
+      <div style={{ width: "100%", display: "flex", justifyContent: "center" }}>
+        <div
+          style={{
+            width: "100%",
+            backgroundColor: cfg.bubbleBg,
+            border: `2px solid ${cfg.bubbleBorder}`,
+            borderRadius: 16,
+            padding: "12px 14px",
+          }}
+        >
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <div style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: cfg.headerBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {cfg.headerIcon}
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: "0.07em", textTransform: "uppercase" }}>
+              {cfg.headerLabel}
+            </span>
+          </div>
+
+          {/* Message */}
+          <p ref={msgRef} className="magic-message" style={{ fontSize: 13, color: "#1A1A2E", margin: 0, lineHeight: 1.5 }}>
+            {cfg.messagePrefix && <>{cfg.messagePrefix}{" "}</>}
+            <span style={{ color: cfg.linkColor, textDecoration: "underline", fontWeight: 600 }}>
+              {cfg.messageLinkText}
+            </span>
+          </p>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
