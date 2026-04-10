@@ -167,6 +167,7 @@ function CalendarioMensile({
 // ── Card area cerebrale ──────────────────────────────────────────────────────
 
 type Periodo = "settimana" | "mese" | "anno";
+const SLICE: Record<Periodo, number> = { settimana: 7, mese: 30, anno: 365 };
 const PERIODO_LABEL: Record<Periodo, string> = { settimana: "Settimana", mese: "Mese", anno: "Anno" };
 
 // Today fixed to mock context: Apr 10, 2026 (Venerdì)
