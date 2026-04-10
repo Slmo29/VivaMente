@@ -142,7 +142,7 @@ function PausaAttivaView({ secondiRimasti }: { secondiRimasti: number }) {
 }
 
 const UPSELL_FEATURES = [
-  { label: "Traccia i tuoi progressi",     icon: StatsReport },
+  { label: "Esercizi di diversi livelli",  icon: StatsReport },
   { label: "Traccia dei tuoi progressi",   icon: Calendar },
   { label: "Medaglie, trofei e molto altro", icon: Medal },
   { label: "Promemoria personalizzati",    icon: Bell },

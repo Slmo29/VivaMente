@@ -100,7 +100,7 @@ export const mockEsercizioDelGiorno = mockEsercizi[0];
 // TODO: in futuro questo verrà da Supabase (sessioni di oggi)
 // TODO: sostituire con query Supabase — SELECT count(*) FROM sessioni WHERE utente_id = ? AND data = TODAY()
 // La logica di blocco è: se sessioni_oggi >= LIMITE_ESERCIZI_GIORNO (5) → mostra modale pausa attiva
-export const mockEserciziOggi = 4;
+export const mockEserciziOggi = 5;
 export const mockEsercizioDelGiornoCompletato = false;
 export const mockEsercizioDelGiornoRisultato = {
   tempo_secondi: 108,   // 1:48
