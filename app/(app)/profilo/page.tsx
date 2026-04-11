@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Card from "@/components/ui/card";
 import Btn from "@/components/ui/btn";
 import Toggle from "@/components/ui/toggle";
 import Modal from "@/components/ui/modal";
+import AppSelect from "@/components/ui/app-select";
 import { useUserStore, type CanalNotifica, type DimensioneTesto, type Familiare } from "@/lib/store";
 import { mockMedaglie } from "@/lib/mock-data";
 import { COLORS } from "@/lib/design-tokens";
@@ -161,14 +162,35 @@ function SezioneInfo() {
 
 // ─── Sezione Notifiche ────────────────────────────────────────────────────────
 function SezioneNotifiche() {
-  const { consenso_notifiche, orario_notifica, canale_notifica, setUser } = useUserStore();
+  const { consenso_notifiche, orario_notifica, canale_notifica, email, setUser } = useUserStore();
   const [saved, setSaved] = useState(false);
+  const [emailDraft, setEmailDraft] = useState("");
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showSaved() {
+    if (savedTimer.current) clearTimeout(savedTimer.current);
+    setSaved(true);
+    savedTimer.current = setTimeout(() => setSaved(false), 2000);
+  }
 
   function save(updates: Parameters<typeof setUser>[0]) {
     setUser(updates);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    showSaved();
   }
+
+  function handleSelezionaCanale(id: CanalNotifica) {
+    save({ canale_notifica: id });
+    if (id === "email") setEmailDraft("");
+  }
+
+  function handleSalvaEmail() {
+    if (!emailDraft.trim()) return;
+    setUser({ email: emailDraft.trim() });
+    showSaved();
+  }
+
+  const mostraInputEmail = canale_notifica === "email" && !email;
+  const mostraEmailSalvata = canale_notifica === "email" && !!email;
 
   return (
     <Card padding="md">
@@ -199,15 +221,19 @@ function SezioneNotifiche() {
                 <Timer width={14} height={14} strokeWidth={1.5} color={COLORS.inkMuted} />
                 Orario
               </p>
-              <select value={orario_notifica} onChange={(e) => save({ orario_notifica: e.target.value })} className={inputCls}>
-                {ORE.map((o) => <option key={o} value={o}>{o}</option>)}
-              </select>
+              <AppSelect
+                value={orario_notifica}
+                onChange={(v) => save({ orario_notifica: v })}
+                options={ORE.map((o) => ({ value: o, label: o }))}
+                direction="down"
+                showSearch={false}
+              />
             </div>
             <div>
               <p className="text-sm font-semibold text-ink-secondary mb-2">Canale preferito</p>
               <div className="grid grid-cols-3 gap-2">
                 {CANALI.map((c) => (
-                  <button key={c.id} onClick={() => save({ canale_notifica: c.id })}
+                  <button key={c.id} onClick={() => handleSelezionaCanale(c.id)}
                     className="min-h-[60px] rounded-md flex flex-col items-center justify-center gap-1 text-sm font-semibold border-2 transition-all"
                     style={{
                       borderColor: canale_notifica === c.id ? COLORS.primary : COLORS.border,
@@ -223,6 +249,41 @@ function SezioneNotifiche() {
                   </button>
                 ))}
               </div>
+
+              {/* Email già presente — mostra conferma */}
+              {mostraEmailSalvata && (
+                <div className="mt-3 flex items-center gap-2 px-3 py-2.5 rounded-lg"
+                  style={{ backgroundColor: COLORS.primaryLight }}>
+                  <Mail width={14} height={14} strokeWidth={1.5} color={COLORS.primary} />
+                  <p className="text-xs font-medium" style={{ color: COLORS.primary }}>
+                    Il promemoria arriverà a <strong>{email}</strong>
+                  </p>
+                </div>
+              )}
+
+              {/* Input email se canale=email e nessuna email salvata */}
+              {mostraInputEmail && (
+                <div className="mt-4 flex flex-col gap-2">
+                  <p className="text-sm font-medium" style={{ color: COLORS.inkPrimary }}>
+                    Inserisci la tua email per ricevere i promemoria
+                  </p>
+                  <input
+                    type="email"
+                    value={emailDraft}
+                    onChange={(e) => setEmailDraft(e.target.value)}
+                    placeholder="tua@email.it"
+                    className={inputCls}
+                  />
+                  <button
+                    onClick={handleSalvaEmail}
+                    disabled={!emailDraft.trim()}
+                    className="w-full py-3 rounded-full text-sm font-bold text-white transition-opacity"
+                    style={{ backgroundColor: COLORS.primary, opacity: emailDraft.trim() ? 1 : 0.45 }}
+                  >
+                    Salva email
+                  </button>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -455,17 +516,13 @@ function SezioneFamiglia() {
               <label className="text-sm font-medium" style={{ color: COLORS.inkPrimary }}>
                 Parentela
               </label>
-              <select
+              <AppSelect
                 value={draft.parentela}
-                onChange={(e) => setDraft({ ...draft, parentela: e.target.value })}
-                className={inputCls}
-                style={{ color: draft.parentela ? undefined : COLORS.inkMuted }}
-              >
-                <option value="" disabled>Seleziona parentela...</option>
-                {PARENTELE.map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
+                onChange={(v) => setDraft({ ...draft, parentela: v })}
+                options={PARENTELE.map((p) => ({ value: p, label: p }))}
+                placeholder="Seleziona parentela..."
+                direction="up"
+              />
             </div>
 
             <button

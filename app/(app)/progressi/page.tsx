@@ -9,6 +9,7 @@ import { useUserStore } from "@/lib/store";
 import { COLORS, CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { AppIcon } from "@/lib/icons";
 import { Lock, Calendar } from "iconoir-react";
+import AppSelect from "@/components/ui/app-select";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
 // ── Calendario ────────────────────────────────────────────────────────────────
@@ -691,20 +692,13 @@ function AttivitaTab({ filtro: filtroExt, setFiltro: setFiltroExt, hidePills }: 
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-bold text-ink">Andamento generale</span>
           {/* Dropdown periodo */}
-          <select
+          <AppSelect
+            size="sm"
+            direction="down"
             value={periodo}
-            onChange={(e) => setPeriodo(e.target.value as Periodo)}
-            className="text-xs font-semibold rounded-lg px-2 py-1 border transition-all outline-none cursor-pointer"
-            style={{
-              backgroundColor: "#F3F4F6",
-              borderColor: COLORS.border,
-              color: COLORS.inkSecondary,
-            }}
-          >
-            {(["settimana", "mese", "anno"] as Periodo[]).map((p) => (
-              <option key={p} value={p}>{PERIODO_LABEL[p]}</option>
-            ))}
-          </select>
+            onChange={(v) => setPeriodo(v as Periodo)}
+            options={(["settimana", "mese", "anno"] as Periodo[]).map((p) => ({ value: p, label: PERIODO_LABEL[p] }))}
+          />
         </div>
 
         <div style={{ height: 160 }}>
