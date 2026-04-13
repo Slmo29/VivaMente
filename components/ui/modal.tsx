@@ -23,9 +23,9 @@ export default function Modal({ open, onClose, title, children, className }: Mod
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-      {/* Overlay */}
+      {/* Overlay — si ferma sopra la navbar */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-x-0 top-0 bottom-[96px] bg-black/40 backdrop-blur-sm"
         onClick={onClose}
       />
 

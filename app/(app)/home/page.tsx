@@ -274,10 +274,11 @@ export default function HomePage() {
                         <div className="flex items-center gap-1 text-xs font-medium">
                           {esercizio.completato && isGuest ? (
                             <button
-                              className="text-xs font-semibold underline whitespace-nowrap"
+                              className="inline-flex items-center gap-1 text-xs font-semibold underline whitespace-nowrap"
                               style={{ color: COLORS.primary, textDecorationColor: COLORS.primary }}
                               onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push("/onboarding/registrati"); }}
                             >
+                              <Lock width={16} height={16} strokeWidth={1.5} color={COLORS.primary} className="flex-shrink-0" />
                               Registrati per sbloccare i risultati
                             </button>
                           ) : esercizio.completato && esercizio.risultato ? (
