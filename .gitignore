@@ -24,6 +24,7 @@ desktop.ini
 
 # editor
 .vscode/
+.claude/settings.local.json
 
 # debug
 npm-debug.log*
