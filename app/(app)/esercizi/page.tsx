@@ -236,9 +236,8 @@ export default function EserciziPage() {
                       </span>
                     )}
                     {lockedGiornaliero && (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold mt-1" style={{ color: COLORS.inkMuted }}>
-                        <Lock width={12} height={12} strokeWidth={1.5} color={COLORS.inkMuted} className="flex-shrink-0" />
-                        Completa prima gli esercizi del giorno
+                      <span className="inline-flex items-center gap-1 font-semibold mt-1 whitespace-nowrap" style={{ color: COLORS.inkMuted, fontSize: 13 }}>
+                        Completa gli esercizi del giorno
                       </span>
                     )}
                   </div>

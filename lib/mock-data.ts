@@ -182,7 +182,7 @@ export const mockEserciziDelGiornoList = [
     categoria_id: "esecutive",
     livello: 2,
     durata_stimata: 120,
-    completato: false,
+    completato: true,
     risultato: null,
   },
   {

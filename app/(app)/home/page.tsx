@@ -253,7 +253,7 @@ export default function HomePage() {
                     </Btn>
                   )}
                 </div>
-                {tuttiCompletati && (
+                {tuttiCompletati && !isGuest && (
                   <>
                     <div style={{ height: 1, backgroundColor: COLORS.border }} />
                     <div className="px-4 py-3 flex items-center gap-3">
