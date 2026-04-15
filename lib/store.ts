@@ -52,7 +52,7 @@ interface UserStore extends UserState {
 
 export const useUserStore = create<UserStore>((set) => ({
   // Dati utente di default
-  isGuest: false,
+  isGuest: true,
   nome: "Mario",
   cognome: "",
   telefono: "+39 333 1234567",

@@ -396,9 +396,18 @@ function CardMessaggi({ nomeUtente, genere }: { nomeUtente: string; genere: "F" 
             ) : (
               <>
                 {/* Header */}
-                <div>
-                  <h3 className="text-xl font-bold" style={{ color: COLORS.inkPrimary }}>Scrivi a {nomeUtente.split(" ")[0]}</h3>
-                  <p className="text-sm mt-1" style={{ color: COLORS.inkSecondary }}>Scegli un messaggio da mandare</p>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold" style={{ color: COLORS.inkPrimary }}>Scrivi a {nomeUtente.split(" ")[0]}</h3>
+                    <p className="text-sm mt-1" style={{ color: COLORS.inkSecondary }}>Scegli un messaggio da mandare</p>
+                  </div>
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 -mt-1"
+                    style={{ backgroundColor: "#F3F4F6" }}
+                  >
+                    <span className="text-lg font-semibold leading-none" style={{ color: "#9CA3AF" }}>×</span>
+                  </button>
                 </div>
 
                 {/* Categoria pills */}

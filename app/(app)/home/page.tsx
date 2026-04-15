@@ -314,14 +314,6 @@ export default function HomePage() {
                         >
                           {esercizio.titolo}
                         </span>
-                        {/* Meta */}
-                        {!esercizio.completato && (
-                          <div className="flex items-center gap-1 text-xs font-medium">
-                            <span style={{ color: COLORS.inkMuted }}>
-                              {Math.ceil((esercizio.durata_stimata ?? 60) / 60)} minuti · Livello {esercizio.livello}
-                            </span>
-                          </div>
-                        )}
                         {esercizio.completato && isGuest && (
                           <div className="flex items-center gap-1 text-xs font-medium">
                             <button

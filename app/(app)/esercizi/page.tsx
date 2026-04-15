@@ -146,8 +146,8 @@ export default function EserciziPage() {
                 {/* Text */}
                 <div className="flex-1 min-w-0">
                   <h3
-                    className={`text-base font-bold leading-snug ${esercizioDelGiorno.completato ? "line-through" : ""}`}
-                    style={{ color: COLORS.inkPrimary }}
+                    className="text-base font-bold leading-snug"
+                    style={{ color: esercizioDelGiorno.completato ? "#B0B0C4" : COLORS.inkPrimary }}
                   >
                     {esercizioDelGiorno.titolo}
                   </h3>
@@ -176,9 +176,9 @@ export default function EserciziPage() {
                 {esercizioDelGiorno.completato && !isGuest ? (
                   <div
                     className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: COLORS.primaryLight }}
+                    style={{ backgroundColor: COLORS.successLight }}
                   >
-                    <Check width={16} height={16} strokeWidth={2} color={COLORS.primary} />
+                    <Check width={16} height={16} strokeWidth={2} color={COLORS.success} />
                   </div>
                 ) : !esercizioDelGiorno.completato ? (
                   <span className="text-xl flex-shrink-0" style={{ color: COLORS.inkMuted }}>›</span>
@@ -200,7 +200,7 @@ export default function EserciziPage() {
           const cat = mockCategorie.find((c) => c.id === esercizio.categoria_id);
           const cc = cat ? CATEGORIA_COLORS[cat.id] : null;
           const lockedGuest = isLocked(esercizio.livello);
-          const lockedGiornaliero = !isGuest && !giornalieriIds.has(esercizio.id) && !tuttiGiornalieriCompletati;
+          const lockedGiornaliero = !isGuest && !giornalieriIds.has(esercizio.id as never) && !tuttiGiornalieriCompletati;
           const locked = lockedGuest || lockedGiornaliero;
 
           return (

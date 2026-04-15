@@ -134,7 +134,7 @@ export default function MessaggiPage() {
                     <button
                       onClick={() => segnaLetto(msg.id)}
                       className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: "#FFFFFF", border: `1.5px solid ${COLORS.primary}` }}
+                      style={{ backgroundColor: `${COLORS.primary}33` }}
                     >
                       <Check width={14} height={14} strokeWidth={2} color={COLORS.primary} />
                     </button>
