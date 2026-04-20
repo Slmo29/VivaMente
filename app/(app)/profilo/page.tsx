@@ -8,12 +8,11 @@ import Toggle from "@/components/ui/toggle";
 import Modal from "@/components/ui/modal";
 import AppSelect from "@/components/ui/app-select";
 import { useUserStore, type CanalNotifica, type Familiare } from "@/lib/store";
-import { mockMedaglie } from "@/lib/mock-data";
 import { COLORS } from "@/lib/design-tokens";
 import { AppIcon } from "@/lib/icons";
 import {
   User, CheckCircle, Phone, Mail, Bell, Timer,
-  Medal, Group,
+  Group,
   NavArrowDown, NavArrowUp,
 } from "iconoir-react";
 
@@ -292,42 +291,6 @@ function SezioneNotifiche() {
   );
 }
 
-// ─── Sezione Medaglie ─────────────────────────────────────────────────────────
-function SezioneMedaglie() {
-  const medaglieIds = useUserStore((s) => s.medaglie);
-  const guadagnate = mockMedaglie.filter((m) => medaglieIds.includes(m.id)).slice(-3);
-
-  return (
-    <Card padding="md">
-      <div className="flex items-center justify-between mb-3">
-        <SectionTitle>
-          <Medal width={18} height={18} strokeWidth={1.5} color={COLORS.primary} />
-          Le mie medaglie
-        </SectionTitle>
-        <Link href="/progressi?tab=medaglie" className="text-sm font-semibold" style={{ color: COLORS.primary }}>
-          Vedi tutte →
-        </Link>
-      </div>
-      {guadagnate.length === 0 ? (
-        <p className="text-sm text-ink-muted text-center py-3">Completa il primo esercizio!</p>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {guadagnate.map((m) => (
-            <div key={m.id} className="flex items-center gap-3 rounded-md p-3"
-              style={{ backgroundColor: COLORS.goldLight }}>
-              <AppIcon name={m.icona} size={24} color={COLORS.gold} />
-              <div>
-                <p className="text-sm font-bold text-ink">{m.nome}</p>
-                <p className="text-xs text-ink-muted">{m.descrizione}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </Card>
-  );
-}
-
 const PARENTELE = [
   "Figlio", "Figlia",
   "Nipote", "Pronipote",
@@ -591,8 +554,7 @@ function InfoValue({ children }: { children: React.ReactNode }) {
 type TabProfilo = "dati" | "impostazioni" | "famiglia";
 
 export default function ProfiloPage() {
-  const { nome, streak, medaglie: medaglieIds, isGuest } = useUserStore();
-  const medaglieCount = mockMedaglie.filter((m) => medaglieIds.includes(m.id)).length;
+  const { nome, isGuest } = useUserStore();
   const membroDal = "20 marzo 2025";
   const [tab, setTab] = useState<TabProfilo>("dati");
 

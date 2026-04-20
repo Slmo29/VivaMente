@@ -6,7 +6,7 @@ import Link from "next/link";
 import Card from "@/components/ui/card";
 import Btn from "@/components/ui/btn";
 import { useUserStore } from "@/lib/store";
-import { mockEsercizioDelGiorno, mockEserciziDelGiornoList, mockCategorie, mockProgressiSettimanali, mockSessioniRecenti, mockMessaggiFamiliari, mockEsercizi } from "@/lib/mock-data";
+import { mockEsercizioDelGiorno, mockEserciziDelGiornoList, mockCategorie, mockProgressiSettimanali, mockSessioniRecenti, mockMessaggiFamiliari, mockEsercizi, mockMedaglie } from "@/lib/mock-data";
 import { CATEGORIA_COLORS, COLORS } from "@/lib/design-tokens";
 import { AppIcon } from "@/lib/icons";
 import { Timer, Running, Phone, Palette, Leaf, Lock, ChatLines, Check } from "iconoir-react";
@@ -178,6 +178,11 @@ export default function HomePage() {
 
   const completatiOggi = mockEserciziDelGiornoList.filter((e) => e.completato).length;
   const totaleEsercizi = mockEserciziDelGiornoList.length;
+
+  // Logica medaglie streak
+  const medagliaAppenaGuadagnata = mockMedaglie.find((m) => m.giorni === streak);
+  const prossimaMedaglia = mockMedaglie.find((m) => m.giorni > streak);
+  const giorniMancantiProssima = prossimaMedaglia ? prossimaMedaglia.giorni - streak : null;
   const eserciziNonCompletati = mockEserciziDelGiornoList.filter(
     (e) => !e.completato && mockEsercizi.some((m) => m.id === e.id)
   );
@@ -262,10 +267,24 @@ export default function HomePage() {
                   <>
                     <div style={{ height: 1, backgroundColor: COLORS.border }} />
                     <div className="px-4 py-3 flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: "#FFE57B" }}>
-                        <span className="text-2xl">🏆</span>
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: COLORS.streakLight }}>
+                        <AppIcon name="flame" size={28} color={COLORS.streak} />
                       </div>
-                      <span className="text-base font-semibold text-ink">Medaglia guadagnata</span>
+                      {medagliaAppenaGuadagnata ? (
+                        <div>
+                          <p className="text-xs font-semibold" style={{ color: COLORS.streak }}>Medaglia sbloccata!</p>
+                          <p className="text-base font-bold text-ink">{medagliaAppenaGuadagnata.nome}</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-base font-bold text-ink">Giorno {streak} attivo!</p>
+                          {prossimaMedaglia && giorniMancantiProssima !== null && (
+                            <p className="text-xs" style={{ color: COLORS.inkMuted }}>
+                              Ancora {giorniMancantiProssima} {giorniMancantiProssima === 1 ? "giorno" : "giorni"} per &ldquo;{prossimaMedaglia.nome}&rdquo;
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </>
                 )}

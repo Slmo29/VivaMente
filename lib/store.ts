@@ -61,8 +61,8 @@ export const useUserStore = create<UserStore>((set) => ({
   orario_notifica: "09:00",
   canale_notifica: "whatsapp",
   consenso_notifiche: true,
-  medaglie: ["prima-sfida", "tre-giorni", "dieci-esercizi"],
-  streak: 7,
+  medaglie: ["giorno-1", "giorni-2", "giorni-3", "giorni-7"],
+  streak: 8,
   esercizi_completati: 12,
   eserciziFattiOggi: mockEserciziOggi, // TODO: da Supabase
   pausaAttivaRichiesta: false,

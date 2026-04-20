@@ -154,15 +154,6 @@ export default function EsercizioPage() {
               </div>
             </Card>
 
-            {/* Medaglia nuova */}
-            {score >= 60 && (
-              <Card padding="md" className="text-center" style={{ backgroundColor: COLORS.goldLight, border: `1px solid ${COLORS.gold}44` }}>
-                <span className="text-4xl block">🌟</span>
-                <p className="text-base font-bold mt-2" style={{ color: COLORS.gold }}>Medaglia sbloccata!</p>
-                <p className="text-sm text-ink-muted">"Prima Sfida" — primo esercizio completato</p>
-              </Card>
-            )}
-
             <div className="flex flex-col gap-3 mt-1">
               <Btn size="lg" onClick={() => setStato("intro")}>Riprova</Btn>
               <Link href="/esercizi"><Btn variant="outline">Altri esercizi</Btn></Link>

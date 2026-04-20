@@ -8,7 +8,7 @@ import { mockMedaglie, mockProgressiSettimanali, mockScoreCategorie, mockStorico
 import { useUserStore } from "@/lib/store";
 import { COLORS, CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { AppIcon } from "@/lib/icons";
-import { Lock, Calendar } from "iconoir-react";
+import { Calendar } from "iconoir-react";
 import AppSelect from "@/components/ui/app-select";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
@@ -842,6 +842,59 @@ function AttivitaTab({ filtro: filtroExt, setFiltro: setFiltroExt, hidePills }: 
   );
 }
 
+// ── Fiamma numerata (medaglie streak) ────────────────────────────────────────
+
+function FlameNumerata({ numero, guadagnata, size = 52 }: { numero: number; guadagnata: boolean; size?: number }) {
+  const uid = `fg-${numero}`;
+  const height = Math.round(size * 1.15);
+  const fontSize = numero >= 100 ? Math.round(size * 0.21) : numero >= 10 ? Math.round(size * 0.26) : Math.round(size * 0.33);
+
+  return (
+    <div style={{ position: "relative", width: size, height }}>
+      <svg width={size} height={height} viewBox="0 0 52 60" fill="none">
+        <defs>
+          {guadagnata && (
+            <linearGradient id={uid} x1="26" y1="0" x2="26" y2="60" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#FDE68A" />
+              <stop offset="55%" stopColor="#F97316" />
+              <stop offset="100%" stopColor="#DC2626" />
+            </linearGradient>
+          )}
+        </defs>
+        {/* Corpo fiamma */}
+        <path
+          d="M26 2C26 2 6 18 6 34C6 46.7 14.9 58 26 58C37.1 58 46 46.7 46 34C46 18 26 2 26 2Z"
+          fill={guadagnata ? `url(#${uid})` : "#E5E7EB"}
+        />
+        {/* Bagliore interno (solo se guadagnata) */}
+        {guadagnata && (
+          <path
+            d="M26 18C22 24 16 30 16 38C16 44 20.5 50 26 50C31.5 50 36 44 36 38C36 30 30 24 26 18Z"
+            fill="#FEF3C7"
+            opacity="0.4"
+          />
+        )}
+      </svg>
+      <span
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          paddingTop: Math.round(size * 0.08),
+          fontSize,
+          fontWeight: 900,
+          color: guadagnata ? "#7C2D12" : "#9CA3AF",
+          lineHeight: 1,
+        }}
+      >
+        {numero}
+      </span>
+    </div>
+  );
+}
+
 type Tab = "attivita" | "storico" | "medaglie";
 
 export default function ProgressiPage() {
@@ -851,7 +904,7 @@ export default function ProgressiPage() {
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const [selectedDate, setSelectedDate] = useState<string | null>(todayStr);
   const [filtroGuest, setFiltroGuest] = useState<FiltroAttivita>("tutti");
-  const { medaglie: medaglieIds, isGuest } = useUserStore();
+  const { streak, isGuest } = useUserStore();
 
   useEffect(() => {
     const t = searchParams.get("tab") as Tab | null;
@@ -868,7 +921,7 @@ export default function ProgressiPage() {
       document.documentElement.style.overflow = "";
     };
   }, [isGuest]);
-  const medaglieGuadagnate = mockMedaglie.filter((m) => medaglieIds.includes(m.id));
+  const medaglieGuadagnate = mockMedaglie.filter((m) => streak >= m.giorni);
 
   return (
     <div className="flex flex-col" style={isGuest ? { overflow: "hidden", height: "100dvh" } : undefined}>
@@ -967,46 +1020,51 @@ export default function ProgressiPage() {
         {/* ── Tab: Medaglie ─────────────────────────────────────────── */}
         {tab === "medaglie" && (
           <>
+            {/* Contatore */}
             <div className="flex items-center justify-between py-1">
-              <p className="text-base text-ink-muted">
+              <p className="text-base" style={{ color: COLORS.inkMuted }}>
                 <strong className="text-ink">{medaglieGuadagnate.length}</strong> di {mockMedaglie.length} medaglie sbloccate
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            {/* Sezione "Giorni di Attività" */}
+            <p className="text-sm font-bold" style={{ color: COLORS.streak }}>
+              Giorni di Attività
+            </p>
+
+            <div className="grid grid-cols-3 gap-3 pb-4">
               {mockMedaglie.map((medaglia) => {
-                const guadagnata = medaglieIds.includes(medaglia.id);
+                const guadagnata = streak >= medaglia.giorni;
+                const rimanenti = medaglia.giorni - streak;
+
                 return (
                   <div
                     key={medaglia.id}
-                    className="rounded-lg p-4 text-center transition-all"
+                    className="flex flex-col items-center gap-1.5 rounded-2xl py-4 px-2"
                     style={{
-                      backgroundColor: guadagnata ? COLORS.goldLight : "#F5F5F5",
-                      border: guadagnata ? `1.5px solid ${COLORS.gold}55` : "1.5px solid #E2E8F0",
-                      opacity: guadagnata ? 1 : 0.55,
+                      backgroundColor: guadagnata ? COLORS.streakLight : "#F9FAFB",
+                      border: guadagnata ? `1.5px solid ${COLORS.streak}44` : "1.5px solid #E5E7EB",
                     }}
                   >
-                    <div className="flex justify-center mb-2">
-                      {guadagnata ? (
-                        <AppIcon name={medaglia.icona} size={40} color={COLORS.gold} />
-                      ) : (
-                        <Lock width={40} height={40} strokeWidth={1.5} color={COLORS.inkMuted} />
-                      )}
-                    </div>
-                    <p className="text-sm font-bold mt-2" style={{ color: guadagnata ? COLORS.ink : COLORS.inkMuted }}>
+                    <FlameNumerata numero={medaglia.giorni} guadagnata={guadagnata} size={48} />
+                    <p
+                      className="text-xs font-bold text-center leading-tight"
+                      style={{ color: guadagnata ? COLORS.streak : COLORS.inkMuted }}
+                    >
                       {medaglia.nome}
                     </p>
-                    <p className="text-xs mt-1 leading-snug" style={{ color: COLORS.inkMuted }}>
-                      {medaglia.descrizione}
-                    </p>
-                    {guadagnata && medaglia.guadagnata_at && (
-                      <div className="flex items-center justify-center gap-1 mt-2">
-                        <Calendar width={12} height={12} strokeWidth={1.5} color={COLORS.gold} />
+                    {guadagnata && medaglia.guadagnata_at ? (
+                      <div className="flex items-center gap-1">
+                        <Calendar width={10} height={10} strokeWidth={1.5} color={COLORS.gold} />
                         <p className="text-xs font-semibold" style={{ color: COLORS.gold }}>
-                          {new Date(medaglia.guadagnata_at).toLocaleDateString("it-IT")}
+                          {new Date(medaglia.guadagnata_at).toLocaleDateString("it-IT", { day: "numeric", month: "short" })}
                         </p>
                       </div>
-                    )}
+                    ) : !guadagnata ? (
+                      <p className="text-xs text-center leading-tight" style={{ color: COLORS.inkMuted }}>
+                        ancora {rimanenti} {rimanenti === 1 ? "giorno" : "giorni"}
+                      </p>
+                    ) : null}
                   </div>
                 );
               })}
