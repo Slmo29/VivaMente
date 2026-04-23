@@ -177,10 +177,10 @@ export default function FamigliaDashboardPage() {
               {ultimeTre.map((m) => (
                 <div key={m.id} className="flex items-center gap-3 rounded-md p-3"
                   style={{ backgroundColor: COLORS.goldLight }}>
-                  <AppIcon name={m.icona} size={24} color={COLORS.gold} />
+                  <AppIcon name={(m as { icona?: string }).icona ?? "star"} size={24} color={COLORS.gold} />
                   <div>
                     <p className="text-sm font-bold text-ink">{m.nome}</p>
-                    <p className="text-xs text-ink-muted">{m.descrizione}</p>
+                    <p className="text-xs text-ink-muted">{(m as { descrizione?: string }).descrizione ?? ""}</p>
                   </div>
                 </div>
               ))}

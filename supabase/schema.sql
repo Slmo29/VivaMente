@@ -1,4 +1,4 @@
--- BrainTrainer — Schema DB V2
+-- VivaMente — Schema DB V2
 -- Eseguire su Supabase SQL Editor
 
 -- ─── Utenti senior ───────────────────────────────────────────────────────────
@@ -13,6 +13,8 @@ create table if not exists users (
   orario_notifica  time default '09:00',
   canale_notifica  text default 'whatsapp', -- 'whatsapp' | 'sms' | 'email'
   consenso_notifiche boolean default false,
+  current_streak    integer not null default 0,
+  last_activity_date date,
   created_at       timestamptz default now()
 );
 
@@ -31,10 +33,11 @@ create table if not exists esercizi (
   categoria_id    text references categorie(id),
   titolo          text not null,
   descrizione     text,
-  livello         integer not null default 1 check (livello between 1 and 6),
+  livello         integer not null default 1 check (livello between 1 and 20),
   difficolta      text default 'facile',    -- 'facile' | 'medio' | 'difficile'
   durata_stimata  integer,                  -- secondi
   beneficio       text,
+  famiglia        text,                     -- motore di gioco condiviso (es. 'sequence_tap')
   config          jsonb,
   attivo          boolean default true,
   created_at      timestamptz default now()
@@ -44,8 +47,9 @@ create table if not exists esercizi (
 create table if not exists sessioni (
   id           uuid primary key default gen_random_uuid(),
   user_id      uuid references users(id) on delete cascade,
-  esercizio_id text references esercizi(id),
+  esercizio_id text,                         -- no FK: gli ID esercizi sono gestiti lato app
   categoria_id text references categorie(id),  -- denormalizzato per query analytics rapide
+  livello      integer,                          -- livello a cui è stata giocata la sessione
   score        integer,
   accuratezza  integer,                         -- percentuale 0-100
   durata       integer,                         -- secondi
@@ -60,6 +64,7 @@ create table if not exists medaglie (
   descrizione text,
   icona       text,
   tipo        text,
+  giorni      integer,
   condizione  jsonb,
   created_at  timestamptz default now()
 );
@@ -74,10 +79,30 @@ create table if not exists user_medaglie (
 );
 
 -- ─── Esercizio del giorno ─────────────────────────────────────────────────────
+-- Per-utente: 5 righe al giorno, una per categoria. La selezione rispetta la
+-- regola di rotazione N = min(5, totale_giochi_categoria - 1).
 create table if not exists esercizi_del_giorno (
   id           uuid primary key default gen_random_uuid(),
-  esercizio_id text references esercizi(id),
-  data         date unique default current_date
+  user_id      uuid not null references users(id) on delete cascade,
+  esercizio_id text not null references esercizi(id),
+  categoria_id text not null references categorie(id),
+  data         date not null default current_date,
+  completato   boolean not null default false,
+  unique (user_id, data, categoria_id)
+);
+
+-- ─── Livelli utente per tipologia cognitiva ───────────────────────────────────
+-- Una riga per utente × categoria (5 righe per utente).
+-- Aggiornato dopo ogni sessione con la logica adattiva:
+--   > 80% sugli ultimi 3 trial → +1  |  70-80% → invariato  |  < 70% → -1
+create table if not exists user_levels (
+  id               uuid primary key default gen_random_uuid(),
+  user_id          uuid not null references users(id) on delete cascade,
+  categoria_id     text not null references categorie(id),
+  livello_corrente integer not null default 1,
+  updated_at       timestamptz not null default now(),
+  unique (user_id, categoria_id),
+  check (livello_corrente between 1 and 20)
 );
 
 -- ─── Familiari collegati ──────────────────────────────────────────────────────
@@ -131,6 +156,7 @@ alter table sessioni           enable row level security;
 alter table medaglie           enable row level security;
 alter table user_medaglie      enable row level security;
 alter table esercizi_del_giorno enable row level security;
+alter table user_levels          enable row level security;
 alter table familiari          enable row level security;
 alter table inviti             enable row level security;
 alter table messaggi           enable row level security;
@@ -145,7 +171,8 @@ create policy "Sessioni: read own"   on sessioni for select using (auth.uid() = 
 create policy "Sessioni: insert own" on sessioni for insert with check (auth.uid() = user_id);
 
 -- user_medaglie
-create policy "Medaglie utente: read own" on user_medaglie for select using (auth.uid() = user_id);
+create policy "Medaglie utente: read own"   on user_medaglie for select using (auth.uid() = user_id);
+create policy "Medaglie utente: insert own" on user_medaglie for insert with check (auth.uid() = user_id);
 
 -- familiari — il senior legge/gestisce i propri familiari
 create policy "Familiari: read own"   on familiari for select using (auth.uid() = user_id);
@@ -167,4 +194,10 @@ create policy "Messaggi: mark read" on messaggi for update using (auth.uid() = d
 create policy "Public read categorie"          on categorie          for select using (true);
 create policy "Public read esercizi"           on esercizi           for select using (true);
 create policy "Public read medaglie"           on medaglie           for select using (true);
-create policy "Public read esercizi_del_giorno" on esercizi_del_giorno for select using (true);
+create policy "EserciziGiorno: read own"   on esercizi_del_giorno for select using (auth.uid() = user_id);
+create policy "EserciziGiorno: insert own" on esercizi_del_giorno for insert with check (auth.uid() = user_id);
+create policy "EserciziGiorno: update own" on esercizi_del_giorno for update using (auth.uid() = user_id);
+
+create policy "UserLevels: read own"   on user_levels for select using (auth.uid() = user_id);
+create policy "UserLevels: insert own" on user_levels for insert with check (auth.uid() = user_id);
+create policy "UserLevels: update own" on user_levels for update using (auth.uid() = user_id);

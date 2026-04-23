@@ -18,7 +18,7 @@ import {
 } from "iconoir-react";
 
 const ORE = ["07:00","08:00","09:00","10:00","11:00","12:00","14:00","16:00","18:00","20:00","21:00"];
-const ANNI = Array.from({ length: 61 }, (_, i) => 1990 - i);
+const _ANNI = Array.from({ length: 61 }, (_, i) => 1990 - i); void _ANNI;
 const CANALI: { id: CanalNotifica; label: string; icona: string }[] = [
   { id: "whatsapp", label: "WhatsApp", icona: "chat" },
   { id: "sms",      label: "SMS",      icona: "phone" },

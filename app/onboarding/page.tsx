@@ -39,7 +39,7 @@ export default function OnboardingPage() {
         <Image src="/logo.svg" alt="VivaMente" width={67} height={80} />
 
         <div className="text-center">
-          <h1 className="text-2xl font-extrabold text-ink">VivaMente</h1>
+          <h1 className="text-2xl font-extrabold" style={{ color: COLORS.primary }}>VivaMente</h1>
           <p className="text-base text-ink-secondary mt-2 leading-relaxed">
             Allena la mente ogni giorno con esercizi semplici e divertenti
           </p>

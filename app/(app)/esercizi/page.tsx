@@ -1,13 +1,14 @@
 "use client";
+export const dynamic = "force-dynamic";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Card from "@/components/ui/card";
-import { mockEsercizi, mockCategorie, mockScoreCategorie, mockEserciziDelGiornoList } from "@/lib/mock-data";
+import { mockEsercizi, mockCategorie } from "@/lib/mock-data";
 import { CATEGORIA_COLORS, COLORS } from "@/lib/design-tokens";
 import { AppIcon } from "@/lib/icons";
-import { Timer, Lock, Running, Check } from "iconoir-react";
+import { Timer, Lock, Check } from "iconoir-react";
 import { useUserStore } from "@/lib/store";
 import { PausaAttivaModal } from "@/components/ui/pausa-attiva-modal";
 
@@ -21,10 +22,10 @@ const TABS = [
   { id: "visuospaziali",  label: "Visuospaziali" },
 ];
 
-export default function EserciziPage() {
+function EserciziPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { nome, isGuest, eserciziFattiOggi, setPausaAttivaRichiesta, pausaAttivaInizio, setPausaAttivaInizio, setNavNascosta } = useUserStore();
+  const { nome, isGuest, eserciziFattiOggi, eserciziDelGiorno, userLevels, setPausaAttivaRichiesta, pausaAttivaInizio, setPausaAttivaInizio, setNavNascosta } = useUserStore();
   const categoriaIniziale = TABS.find((t) => t.id === searchParams.get("categoria"))?.id ?? "memoria";
   const [tab, setTab] = useState(categoriaIniziale);
   const tabBarRef = useRef<HTMLDivElement>(null);
@@ -37,15 +38,17 @@ export default function EserciziPage() {
   const [mostraConfermaInterruzione, setMostraConfermaInterruzione] = useState(false);
   const [esercizioTarget, setEsercizioTarget] = useState<string | null>(null);
 
-  // TODO: sostituire con query Supabase — SELECT livello FROM progressi_utente WHERE categoria = tab AND user_id = ...
-  const livelloUtente = mockScoreCategorie.find((c) => c.categoria.toLowerCase() === tab)?.livello ?? 1;
+  const livelloUtente = userLevels[tab] ?? 1;
 
-  const esercizioDelGiorno = mockEserciziDelGiornoList.find((e) => e.categoria_id === tab) ?? null;
-  const giornalieriIds = new Set(mockEserciziDelGiornoList.map((e) => e.id));
-  const tuttiGiornalieriCompletati = mockEserciziDelGiornoList.every((e) => e.completato);
+  const esercizioDelGiorno = eserciziDelGiorno.find((e) => e.categoria_id === tab) ?? null;
+  const giornalieriIds = new Set(eserciziDelGiorno.map((e) => e.id));
+  const tuttiGiornalieriCompletati = eserciziDelGiorno.length > 0 && eserciziDelGiorno.every((e) => e.completato);
+
+  const ESERCIZI_NASCOSTI = new Set(["mental-rotation-oggetti-3d"]);
 
   const eserciziFiltrati = mockEsercizi
     .filter((e) => e.categoria_id === tab)
+    .filter((e) => !ESERCIZI_NASCOSTI.has(e.id))
     .filter((e) => isGuest || e.livello <= livelloUtente)
     .filter((e) => e.id !== esercizioDelGiorno?.id);
 
@@ -84,7 +87,6 @@ export default function EserciziPage() {
         <div ref={tabBarRef} className="flex mt-4 overflow-x-auto scrollbar-none -mx-4 px-4">
           {TABS.map((t) => {
             const active = tab === t.id;
-            const cc = CATEGORIA_COLORS[t.id];
             const cat = mockCategorie.find((c) => c.id === t.id);
             return (
               <button
@@ -168,7 +170,7 @@ export default function EserciziPage() {
                       <Timer width={14} height={14} strokeWidth={1.5} color={COLORS.inkMuted} />
                       <span>{Math.ceil((esercizioDelGiorno.durata_stimata ?? 60) / 60)} minuti</span>
                       <span>·</span>
-                      <span>Livello {esercizioDelGiorno.livello}/6</span>
+                      <span>Livello {esercizioDelGiorno.livello}/20</span>
                     </div>
                   )}
                 </div>
@@ -227,7 +229,7 @@ export default function EserciziPage() {
                       <Timer width={14} height={14} strokeWidth={1.5} color={COLORS.inkMuted} />
                       <span>{Math.ceil((esercizio.durata_stimata ?? 60) / 60)} minuti</span>
                       <span>·</span>
-                      <span>Livello {esercizio.livello}/6</span>
+                      <span>Livello {esercizio.livello}/20</span>
                     </div>
                     {lockedGuest && (
                       <span className="inline-flex items-center gap-1 text-xs font-bold mt-1 underline" style={{ color: COLORS.primary, textDecorationColor: COLORS.primary }}>
@@ -311,4 +313,8 @@ export default function EserciziPage() {
       )}
     </div>
   );
+}
+
+export default function EserciziPage() {
+  return <Suspense fallback={null}><EserciziPageContent /></Suspense>;
 }

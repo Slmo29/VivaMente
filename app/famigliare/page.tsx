@@ -2,16 +2,15 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { COLORS, CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { AppIcon } from "@/lib/icons";
 import Card from "@/components/ui/card";
 import {
-  mockEserciziDelGiornoList,
-  mockScoreCategorie,
-  mockMessaggiFamiliari,
-  mockStoricoGiornaliero,
-} from "@/lib/mock-data";
+  fetchFamiliareDashboard,
+  inviaMessaggioFamiliare,
+  type FamiliareDashboard,
+} from "@/lib/sync";
 
 // ── Calendario helpers ────────────────────────────────────────────────────────
 const MESI_IT = [
@@ -27,23 +26,34 @@ function buildCalendarCells(year: number, month: number): (number | null)[] {
   return cells;
 }
 
-function getAllCompletatiDates(): Set<string> {
+function getAllCompletatiDates(sessioni: FamiliareDashboard["sessioni_recenti"]): Set<string> {
   const set = new Set<string>();
-  for (const g of mockStoricoGiornaliero) {
-    if (g.sessioni.length >= 5) set.add(g.data);
+  const grouped: Record<string, number> = {};
+  for (const s of sessioni) {
+    const date = s.created_at.slice(0, 10);
+    grouped[date] = (grouped[date] ?? 0) + 1;
+  }
+  for (const [date, count] of Object.entries(grouped)) {
+    if (count >= 5) set.add(date);
   }
   return set;
 }
 
-function getAllAttivitaDates(): Set<string> {
+function getAllAttivitaDates(sessioni: FamiliareDashboard["sessioni_recenti"]): Set<string> {
   const set = new Set<string>();
-  for (const g of mockStoricoGiornaliero) {
-    if (g.sessioni.length > 0) set.add(g.data);
+  for (const s of sessioni) {
+    set.add(s.created_at.slice(0, 10));
   }
   return set;
 }
 
-function CalendarioReadOnly({ streak }: { streak: number }) {
+function CalendarioReadOnly({
+  streak,
+  sessioni,
+}: {
+  streak: number;
+  sessioni: FamiliareDashboard["sessioni_recenti"];
+}) {
   const [meseOffset, setMeseOffset] = useState(0);
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -55,8 +65,8 @@ function CalendarioReadOnly({ streak }: { streak: number }) {
   const month = displayDate.getMonth();
   const isCurrentMonth = year === currentYear && month === currentMonth;
 
-  const completatiSet = getAllCompletatiDates();
-  const attivitaSet = getAllAttivitaDates();
+  const completatiSet = getAllCompletatiDates(sessioni);
+  const attivitaSet = getAllAttivitaDates(sessioni);
   const cells = buildCalendarCells(year, month);
   const HEADER = ["L", "M", "M", "G", "V", "S", "D"];
 
@@ -152,19 +162,6 @@ function CalendarioReadOnly({ streak }: { streak: number }) {
   );
 }
 
-// ─── Mock dati utente (verrà da Supabase via token) ──────────────────────────
-// TODO: sostituire con query Supabase:
-//   SELECT u.nome, u.genere, i.parentela
-//   FROM inviti i JOIN utenti u ON u.id = i.utente_id
-//   WHERE i.token = <token_da_url>
-const MOCK_UTENTE = {
-  nome: "Giulia Rossi",
-  iniziale: "G",
-  parentela: "Figlia", // parentela come impostata dall'utente al momento dell'invito
-  streak: 3,
-  genere: "F" as "F" | "M", // TODO: da Supabase — utenti.genere
-};
-
 // Mappa parentela (come impostata dall'anziano) + genere dell'anziano → etichetta per il familiare
 const RELAZIONE_LABEL: Record<string, { M: string; F: string }> = {
   "Figlio":           { M: "Tuo padre",       F: "Tua madre"       },
@@ -191,10 +188,16 @@ function getRelazione(parentela: string, genere: "M" | "F"): string {
 type Periodo = "settimana" | "mese" | "anno";
 
 // ─── Sezione Progressi giornata ───────────────────────────────────────────────
-function CardProgressiGiornata() {
-  const completati = mockEserciziDelGiornoList.filter((e) => e.completato).length;
-  const totale = mockEserciziDelGiornoList.length;
-  const pct = Math.round((completati / totale) * 100);
+function CardProgressiGiornata({
+  eserciziOggi,
+  streak,
+}: {
+  eserciziOggi: FamiliareDashboard["esercizi_oggi"];
+  streak: number;
+}) {
+  const completati = eserciziOggi.filter((e) => e.completato).length;
+  const totale = eserciziOggi.length;
+  const pct = totale > 0 ? Math.round((completati / totale) * 100) : 0;
 
   return (
     <div className="bg-white rounded-2xl p-4 flex flex-col gap-4" style={{ boxShadow: "0 0 2px rgba(0,0,0,0.15)" }}>
@@ -219,7 +222,7 @@ function CardProgressiGiornata() {
           <span className="text-xs font-semibold" style={{ color: COLORS.inkMuted }}>Esercizi completati</span>
         </div>
         <div className="rounded-2xl p-4 flex flex-col gap-1" style={{ backgroundColor: COLORS.background }}>
-          <span className="text-xl font-bold" style={{ color: COLORS.inkPrimary }}>{MOCK_UTENTE.streak}</span>
+          <span className="text-xl font-bold" style={{ color: COLORS.inkPrimary }}>{streak}</span>
           <span className="text-xs font-semibold" style={{ color: COLORS.inkMuted }}>Giorni consecutivi</span>
         </div>
       </div>
@@ -228,7 +231,19 @@ function CardProgressiGiornata() {
 }
 
 // ─── Sezione Andamento ────────────────────────────────────────────────────────
-function CardAndamento() {
+const CATEGORIE_ANDAMENTO: { id: string; label: string; icona: string }[] = [
+  { id: "memoria",       label: "Memoria",       icona: "brain" },
+  { id: "attenzione",    label: "Attenzione",    icona: "eye" },
+  { id: "linguaggio",    label: "Linguaggio",    icona: "message-circle" },
+  { id: "esecutive",     label: "Esecutive",     icona: "zap" },
+  { id: "visuospaziali", label: "Visuospaziali", icona: "grid" },
+];
+
+function CardAndamento({
+  sessioni,
+}: {
+  sessioni: FamiliareDashboard["sessioni_recenti"];
+}) {
   const [periodo, setPeriodo] = useState<Periodo>("settimana");
 
   const PERIODI: { id: Periodo; label: string }[] = [
@@ -236,6 +251,14 @@ function CardAndamento() {
     { id: "mese",      label: "Mese" },
     { id: "anno",      label: "Anno" },
   ];
+
+  const scorePerCategoria = CATEGORIE_ANDAMENTO.map((cat) => {
+    const filtered = sessioni.filter((s) => s.categoria_id === cat.id);
+    const score = filtered.length > 0
+      ? Math.round(filtered.reduce((sum, s) => sum + s.score, 0) / filtered.length)
+      : 0;
+    return { ...cat, score };
+  });
 
   return (
     <div className="bg-white rounded-2xl p-4 flex flex-col gap-4" style={{ boxShadow: "0 0 2px rgba(0,0,0,0.15)" }}>
@@ -260,11 +283,11 @@ function CardAndamento() {
 
       {/* Righe categorie */}
       <div className="flex flex-col gap-2">
-        {mockScoreCategorie.map((cat) => {
-          const cc = CATEGORIA_COLORS[cat.categoria.toLowerCase()];
+        {scorePerCategoria.map((cat) => {
+          const cc = CATEGORIA_COLORS[cat.id];
           return (
             <div
-              key={cat.categoria}
+              key={cat.id}
               className="rounded-2xl p-4 flex flex-col gap-3"
               style={{ backgroundColor: cc?.bg ?? COLORS.background }}
             >
@@ -278,7 +301,7 @@ function CardAndamento() {
                     <AppIcon name={cat.icona} size={16} color="#fff" />
                   </div>
                   <span className="text-sm font-semibold" style={{ color: cc?.text ?? COLORS.inkPrimary }}>
-                    {cat.categoria}
+                    {cat.label}
                   </span>
                 </div>
               </div>
@@ -301,7 +324,7 @@ function CardAndamento() {
       </div>
 
       {/* Calendario storico */}
-      <CalendarioReadOnly streak={MOCK_UTENTE.streak} />
+      <CalendarioReadOnly streak={0} sessioni={sessioni} />
     </div>
   );
 }
@@ -345,24 +368,37 @@ const MESSAGGI_CATEGORIE: Record<string, Messaggio[]> = {
 };
 const CATEGORIE = Object.keys(MESSAGGI_CATEGORIE);
 
+function formatDataMessaggio(created_at: string): string {
+  const d = new Date(created_at);
+  const mesi = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
+  return `${d.getDate()} ${mesi[d.getMonth()]}`;
+}
+
 // ─── Sezione Messaggi ─────────────────────────────────────────────────────────
-function CardMessaggi({ nomeUtente, genere }: { nomeUtente: string; genere: "F" | "M" }) {
+function CardMessaggi({
+  messaggiInviati,
+  token,
+  nomeUtente,
+  genere,
+}: {
+  messaggiInviati: FamiliareDashboard["messaggi_inviati"];
+  token: string;
+  nomeUtente: string;
+  genere: "F" | "M";
+}) {
   const g = genere === "F" ? "f" : "m" as "f" | "m";
   const [showModal, setShowModal] = useState(false);
   const [categoriaSelezionata, setCategoriaSelezionata] = useState("Incoraggiamento");
   const [messaggioSelezionato, setMessaggioSelezionato] = useState(MESSAGGI_CATEGORIE["Incoraggiamento"][0][g]);
   const [inviato, setInviato] = useState(false);
 
-  // TODO: da Supabase — SELECT * FROM messaggi WHERE mittente_id = familiare_id ORDER BY data DESC LIMIT 3
-  const messaggiInviati = mockMessaggiFamiliari.slice(0, 2);
-
   function handleCategoriaChange(cat: string) {
     setCategoriaSelezionata(cat);
     setMessaggioSelezionato(MESSAGGI_CATEGORIE[cat][0][g]);
   }
 
-  function handleInvia() {
-    // TODO: INSERT INTO messaggi (testo, mittente_id, destinatario_id) VALUES (...)
+  async function handleInvia() {
+    await inviaMessaggioFamiliare(token, messaggioSelezionato, categoriaSelezionata);
     setInviato(true);
     setTimeout(() => {
       setInviato(false);
@@ -376,7 +412,7 @@ function CardMessaggi({ nomeUtente, genere }: { nomeUtente: string; genere: "F" 
         <span className="text-base font-semibold" style={{ color: COLORS.inkPrimary }}>Messaggi inviati</span>
 
         <div className="flex flex-col gap-2">
-          {messaggiInviati.map((msg) => (
+          {messaggiInviati.slice(0, 2).map((msg) => (
             <div
               key={msg.id}
               className="rounded-2xl p-4 flex flex-col gap-1"
@@ -384,7 +420,7 @@ function CardMessaggi({ nomeUtente, genere }: { nomeUtente: string; genere: "F" 
             >
               <span className="text-xs font-semibold" style={{ color: COLORS.inkMuted }}>Ultimo messaggio inviato</span>
               <span className="text-sm font-semibold" style={{ color: COLORS.inkPrimary }}>{msg.testo}</span>
-              <span className="text-xs" style={{ color: COLORS.inkMuted }}>{msg.data}</span>
+              <span className="text-xs" style={{ color: COLORS.inkMuted }}>{formatDataMessaggio(msg.created_at)}</span>
             </div>
           ))}
         </div>
@@ -511,8 +547,57 @@ function CardMessaggi({ nomeUtente, genere }: { nomeUtente: string; genere: "F" 
 // ─── Contenuto principale ─────────────────────────────────────────────────────
 function InvitoContent() {
   const searchParams = useSearchParams();
-  // TODO: usare token per recuperare i dati reali da Supabase
-  const _token = searchParams.get("token");
+  const token = searchParams.get("token") ?? "";
+
+  const [dashboard, setDashboard] = useState<FamiliareDashboard | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [tokenError, setTokenError] = useState(false);
+
+  useEffect(() => {
+    if (!token) {
+      setTokenError(true);
+      setLoading(false);
+      return;
+    }
+    fetchFamiliareDashboard(token).then((data) => {
+      if (!data) {
+        setTokenError(true);
+      } else {
+        setDashboard(data);
+      }
+      setLoading(false);
+    });
+  }, [token]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (tokenError || !dashboard) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center" style={{ backgroundColor: COLORS.background }}>
+        <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: `${COLORS.primary}20` }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={COLORS.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        </div>
+        <p className="text-lg font-bold" style={{ color: COLORS.inkPrimary }}>Link non valido o scaduto</p>
+        <p className="text-sm" style={{ color: COLORS.inkMuted }}>Chiedi un nuovo link all'utente che ti ha invitato.</p>
+      </div>
+    );
+  }
+
+  const { senior, invito } = dashboard;
+  const nomeUtente = senior.nome;
+  const iniziale = nomeUtente.charAt(0).toUpperCase();
+  const genere = senior.genere ?? "F";
+  const relazione = getRelazione(invito.relazione, genere);
 
   return (
     <div className="min-h-screen flex flex-col max-w-lg mx-auto" style={{ backgroundColor: COLORS.background }}>
@@ -522,21 +607,26 @@ function InvitoContent() {
           className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-black text-white flex-shrink-0"
           style={{ backgroundColor: COLORS.primary }}
         >
-          {MOCK_UTENTE.iniziale}
+          {iniziale}
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-lg font-bold" style={{ color: COLORS.inkPrimary }}>{MOCK_UTENTE.nome}</span>
+          <span className="text-lg font-bold" style={{ color: COLORS.inkPrimary }}>{nomeUtente}</span>
           <span className="text-sm font-semibold" style={{ color: COLORS.inkMuted }}>
-            {getRelazione(MOCK_UTENTE.parentela, MOCK_UTENTE.genere)}
+            {relazione}
           </span>
         </div>
       </div>
 
       {/* Cards */}
       <div className="flex flex-col gap-3 px-4 pb-8">
-        <CardProgressiGiornata />
-        <CardAndamento />
-        <CardMessaggi nomeUtente={MOCK_UTENTE.nome} genere={MOCK_UTENTE.genere} />
+        <CardProgressiGiornata eserciziOggi={dashboard.esercizi_oggi} streak={senior.current_streak} />
+        <CardAndamento sessioni={dashboard.sessioni_recenti} />
+        <CardMessaggi
+          messaggiInviati={dashboard.messaggi_inviati}
+          token={token}
+          nomeUtente={nomeUtente}
+          genere={genere}
+        />
       </div>
     </div>
   );

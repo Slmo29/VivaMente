@@ -34,9 +34,8 @@ import {
   Puzzle,
   Eye,
 } from "iconoir-react";
-import type { SVGProps } from "react";
-
-type IconComponent = React.ComponentType<SVGProps<SVGSVGElement> & { strokeWidth?: number }>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type IconComponent = React.ComponentType<any>;
 
 export const ICON_MAP: Record<string, IconComponent> = {
   brain:    Brain,

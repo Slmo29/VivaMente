@@ -1,137 +1,143 @@
--- BrainTrainer — Seed Data V2
+-- ─── VivaMente — Seed dati statici ───────────────────────────────────────────
+-- Eseguire nel Supabase SQL Editor dopo aver applicato schema.sql + migrations.
+-- Idempotente: usa ON CONFLICT DO NOTHING.
 
--- ─── Categorie (tutte e 5) ────────────────────────────────────────────────────
-insert into categorie (id, nome, icona, descrizione, colore) values
-  ('memoria',       'Memoria',        'brain',       'Esercizi per allenare la memoria a breve e lungo termine',          '#2563EB'),
-  ('attenzione',    'Attenzione',     'target',      'Esercizi per migliorare la concentrazione e l''attenzione',         '#7C3AED'),
-  ('linguaggio',    'Linguaggio',     'chat',        'Esercizi per mantenere le capacità linguistiche',                   '#16A34A'),
-  ('esecutive',     'Esecutive',      'puzzle',      'Esercizi per le funzioni esecutive: pianificazione e problem solving','#D97706'),
-  ('visuospaziali', 'Visuospaziali',  'eye',         'Esercizi per la percezione e l''orientamento spaziale',             '#DC2626')
-on conflict do nothing;
-
--- ─── Esercizi Memoria ────────────────────────────────────────────────────────
-insert into esercizi (id, categoria_id, titolo, descrizione, livello, difficolta, durata_stimata, beneficio, config) values
-  ('memoria-parole-1', 'memoria', 'Ricorda le Parole', 'Memorizza le parole e poi riordinale', 1, 'facile', 90,
-   'Stimola la memoria di lavoro e la capacità di richiamare informazioni',
-   '{"tipo": "memoria_parole", "parole": ["CASA", "LUNA", "PANE", "FIORE"], "tempo_visualizzazione": 5, "tempo_risposta": 30}'),
-
-  ('memoria-colori-1', 'memoria', 'Sequenza di Colori', 'Ripeti la sequenza di colori nell''ordine giusto', 1, 'facile', 60,
-   'Allena la memoria sequenziale e il coordinamento visivo-motorio',
-   '{"tipo": "sequenza_colori", "lunghezza_sequenza": 4, "tempo_per_colore": 800}'),
-
-  ('memoria-parole-2', 'memoria', 'Ricorda le Parole (Medio)', 'Memorizza più parole in meno tempo', 3, 'medio', 90,
-   'Potenzia la memoria di lavoro con sfide crescenti',
-   '{"tipo": "memoria_parole", "parole": ["MARE", "SOLE", "LIBRO", "ALBERO", "GATTO"], "tempo_visualizzazione": 4, "tempo_risposta": 25}'),
-
-  ('memoria-colori-2', 'memoria', 'Sequenza Lunga', 'Ripeti una sequenza più lunga di colori', 3, 'medio', 90,
-   'Migliora la capacità di memorizzazione sequenziale',
-   '{"tipo": "sequenza_colori", "lunghezza_sequenza": 6, "tempo_per_colore": 700}'),
-
-  ('memoria-parole-3', 'memoria', 'Ricorda le Parole (Difficile)', 'Sette parole da ricordare in poco tempo', 5, 'difficile', 120,
-   'Massima stimolazione della memoria di lavoro',
-   '{"tipo": "memoria_parole", "parole": ["MONTAGNA", "FARFALLA", "CAPPELLO", "FINESTRA", "BICICLETTA", "CANDELA", "PONTE"], "tempo_visualizzazione": 4, "tempo_risposta": 20}')
-on conflict do nothing;
-
--- ─── Esercizi Attenzione ──────────────────────────────────────────────────────
-insert into esercizi (id, categoria_id, titolo, descrizione, livello, difficolta, durata_stimata, beneficio, config) values
-  ('attenzione-differenze-1', 'attenzione', 'Trova le Differenze', 'Trova le 5 differenze tra le due immagini', 1, 'facile', 60,
-   'Allena la concentrazione e la percezione visiva del dettaglio',
-   '{"tipo": "trova_differenze", "differenze": 5, "tempo": 60}'),
-
-  ('attenzione-stroop-1', 'attenzione', 'Test Stroop', 'Di che colore è scritto questo testo?', 3, 'medio', 60,
-   'Potenzia il controllo cognitivo e l''inibizione delle risposte automatiche',
-   '{"tipo": "stroop", "domande": 10, "tempo_per_domanda": 4}'),
-
-  ('attenzione-differenze-2', 'attenzione', 'Trova le Differenze (Difficile)', 'Trova le differenze in meno tempo', 5, 'difficile', 60,
-   'Massima stimolazione dell''attenzione visiva',
-   '{"tipo": "trova_differenze", "differenze": 7, "tempo": 45}'),
-
-  ('attenzione-reazione-1', 'attenzione', 'Reazione Visiva', 'Tocca solo i cerchi del colore richiesto', 2, 'facile', 60,
-   'Migliora i tempi di reazione e la selezione visiva',
-   '{"tipo": "reazione_visiva", "durata": 30, "colore_target": "blu"}'),
-
-  ('attenzione-stroop-2', 'attenzione', 'Stroop Avanzato', 'Test Stroop con più domande e meno tempo', 5, 'difficile', 60,
-   'Massima stimolazione del controllo cognitivo',
-   '{"tipo": "stroop", "domande": 15, "tempo_per_domanda": 3}')
-on conflict do nothing;
-
--- ─── Esercizi Linguaggio ──────────────────────────────────────────────────────
-insert into esercizi (id, categoria_id, titolo, descrizione, livello, difficolta, durata_stimata, beneficio, config) values
-  ('linguaggio-anagramma-1', 'linguaggio', 'Anagramma', 'Ricomponi le parole mischiate', 1, 'facile', 45,
-   'Stimola le capacità linguistiche e il pensiero flessibile',
-   '{"tipo": "anagramma", "parole": ["AMORE", "TAVOLO", "GIARDINO"], "suggerimento": true, "tempo": 45}'),
-
-  ('linguaggio-completa-1', 'linguaggio', 'Completa la Parola', 'Completa le parole con le lettere mancanti', 1, 'facile', 30,
-   'Mantiene il vocabolario attivo e la memoria delle parole',
-   '{"tipo": "completa_parola", "parole": ["CA__", "F__RE", "LU__"], "soluzioni": ["CASA", "FIORE", "LUNA"]}'),
-
-  ('linguaggio-anagramma-2', 'linguaggio', 'Anagramma Difficile', 'Parole più lunghe da ricomporre', 3, 'medio', 60,
-   'Potenzia le capacità linguistiche con sfide più complesse',
-   '{"tipo": "anagramma", "parole": ["BIBLIOTECA", "FARFALLA", "CAMPAGNA"], "suggerimento": false, "tempo": 60}'),
-
-  ('linguaggio-frasi-1', 'linguaggio', 'Completa le Frasi', 'Trova la parola che completa la frase', 3, 'medio', 45,
-   'Stimola la comprensione semantica e il ragionamento linguistico',
-   '{"tipo": "completa_parola", "parole": ["Il gatto beve il __TTE", "La notte è __URA", "Il sole è CA__DO"], "soluzioni": ["LATTE", "SCURA", "CALDO"]}'),
-
-  ('linguaggio-anagramma-3', 'linguaggio', 'Anagramma Esperto', 'Parole molto complesse', 5, 'difficile', 90,
-   'Massima stimolazione delle capacità linguistiche',
-   '{"tipo": "anagramma", "parole": ["RIVOLUZIONE", "MERAVIGLIOSO", "AVVENTURA"], "suggerimento": false, "tempo": 45}')
-on conflict do nothing;
-
--- ─── Esercizi Funzioni Esecutive ──────────────────────────────────────────────
-insert into esercizi (id, categoria_id, titolo, descrizione, livello, difficolta, durata_stimata, beneficio, config) values
-  ('esecutive-torre-1', 'esecutive', 'Torre di Hanoi', 'Sposta i dischi seguendo le regole', 2, 'facile', 90,
-   'Allena la pianificazione e la capacità di problem solving sequenziale',
-   '{"tipo": "torre_hanoi", "dischi": 3}'),
-
-  ('esecutive-percorso-1', 'esecutive', 'Pianifica il Percorso', 'Trova il percorso più corto sulla mappa', 2, 'facile', 60,
-   'Sviluppa la capacità di pianificazione e il ragionamento spaziale',
-   '{"tipo": "percorso", "griglia": 4}'),
-
-  ('esecutive-calcolo-1', 'esecutive', 'Calcolo Mentale', 'Risolvi le operazioni senza carta e penna', 3, 'medio', 60,
-   'Mantiene le abilità di calcolo mentale e la concentrazione',
-   '{"tipo": "calcolo", "operazioni": 8, "range": [10, 50]}'),
-
-  ('esecutive-torre-2', 'esecutive', 'Torre di Hanoi (Difficile)', 'Più dischi, più ragionamento', 5, 'difficile', 120,
-   'Massima stimolazione della pianificazione strategica',
-   '{"tipo": "torre_hanoi", "dischi": 5}'),
-
-  ('esecutive-doppio-1', 'esecutive', 'Doppio Compito', 'Esegui due compiti contemporaneamente', 4, 'difficile', 90,
-   'Allena la flessibilità cognitiva e la gestione di più informazioni simultanee',
-   '{"tipo": "doppio_compito"}')
-on conflict do nothing;
-
--- ─── Esercizi Visuospaziali ───────────────────────────────────────────────────
-insert into esercizi (id, categoria_id, titolo, descrizione, livello, difficolta, durata_stimata, beneficio, config) values
-  ('visuo-rotazione-1', 'visuospaziali', 'Rotazione Mentale', 'Quale forma corrisponde a quella ruotata?', 1, 'facile', 60,
-   'Sviluppa la capacità di manipolazione mentale degli oggetti nello spazio',
-   '{"tipo": "rotazione", "forme": 4, "angoli": [90, 180]}'),
-
-  ('visuo-puzzle-1', 'visuospaziali', 'Puzzle Semplice', 'Ricomponi l''immagine spostando i pezzi', 1, 'facile', 90,
-   'Stimola la percezione visiva e la capacità di orientamento spaziale',
-   '{"tipo": "puzzle", "pezzi": 9}'),
-
-  ('visuo-labirinto-1', 'visuospaziali', 'Labirinto', 'Trova l''uscita dal labirinto', 2, 'facile', 60,
-   'Allena la pianificazione spaziale e la memoria di lavoro visiva',
-   '{"tipo": "labirinto", "dimensione": "piccolo"}'),
-
-  ('visuo-rotazione-2', 'visuospaziali', 'Rotazione Avanzata', 'Forme 3D da ruotare mentalmente', 4, 'medio', 90,
-   'Potenzia la visualizzazione mentale tridimensionale',
-   '{"tipo": "rotazione_3d", "forme": 4}'),
-
-  ('visuo-puzzle-2', 'visuospaziali', 'Puzzle Difficile', 'Immagine complessa con molti pezzi', 5, 'difficile', 120,
-   'Massima stimolazione della percezione spaziale e dell''attenzione al dettaglio',
-   '{"tipo": "puzzle", "pezzi": 16}')
-on conflict do nothing;
+-- ─── Categorie ────────────────────────────────────────────────────────────────
+insert into categorie (id, nome, icona, colore, descrizione) values
+  ('memoria',       'Memoria',       'brain',  '#2563EB', 'Ricorda, memorizza, richiama'),
+  ('attenzione',    'Attenzione',    'target', '#7C3AED', 'Concentrati, osserva, reagisci'),
+  ('linguaggio',    'Linguaggio',    'chat',   '#16A34A', 'Parole, frasi, significati'),
+  ('esecutive',     'Esecutive',     'puzzle', '#D97706', 'Pianifica, organizza, decidi'),
+  ('visuospaziali', 'Visuospaziali', 'eye',    '#0F766E', 'Percepisci, orienta, visualizza')
+on conflict (id) do nothing;
 
 -- ─── Medaglie ─────────────────────────────────────────────────────────────────
-insert into medaglie (id, nome, descrizione, icona, tipo, condizione) values
-  ('prima-sfida',       'Prima Sfida',           'Hai completato il tuo primo esercizio!',           'star',    'completamento', '{"tipo": "totale_esercizi", "valore": 1}'),
-  ('tre-giorni',        '3 Giorni di Fila',       'Ti alleni da 3 giorni consecutivi, bravo!',        'fire',    'streak',        '{"tipo": "streak", "valore": 3}'),
-  ('una-settimana',     'Una Settimana!',          'Sette giorni di allenamento consecutivo!',         'muscle',  'streak',        '{"tipo": "streak", "valore": 7}'),
-  ('un-mese',           'Un Mese Intero',          'Trenta giorni consecutivi, sei un campione!',      'trophy',  'streak',        '{"tipo": "streak", "valore": 30}'),
-  ('dieci-esercizi',    'Allenatore',              'Hai completato 10 esercizi in totale',             'target',  'completamento', '{"tipo": "totale_esercizi", "valore": 10}'),
-  ('cinquanta-esercizi','Veterano',                'Hai completato 50 esercizi in totale',             'medal',   'completamento', '{"tipo": "totale_esercizi", "valore": 50}'),
-  ('maestro-memoria',   'Maestro della Memoria',   'Hai completato 10 esercizi di memoria',            'brain',   'categoria',     '{"tipo": "esercizi_categoria", "categoria": "memoria", "valore": 10}'),
-  ('buon-compleanno',   'Buon Compleanno!',        'Tanti auguri! Festeggia allenando la mente',       'cake',    'speciale',      '{"tipo": "compleanno"}')
-on conflict do nothing;
+insert into medaglie (id, nome, giorni, tipo, condizione) values
+  ('giorno-1',   'Primo giorno',           1,   'streak', '{"giorni":1}'),
+  ('giorni-2',   '2 giorni consecutivi',   2,   'streak', '{"giorni":2}'),
+  ('giorni-3',   '3 giorni consecutivi',   3,   'streak', '{"giorni":3}'),
+  ('giorni-7',   '7 giorni consecutivi',   7,   'streak', '{"giorni":7}'),
+  ('giorni-10',  '10 giorni consecutivi',  10,  'streak', '{"giorni":10}'),
+  ('giorni-14',  '14 giorni consecutivi',  14,  'streak', '{"giorni":14}'),
+  ('giorni-28',  '28 giorni consecutivi',  28,  'streak', '{"giorni":28}'),
+  ('giorni-50',  '50 giorni consecutivi',  50,  'streak', '{"giorni":50}'),
+  ('giorni-100', '100 giorni consecutivi', 100, 'streak', '{"giorni":100}'),
+  ('giorni-200', '200 giorni consecutivi', 200, 'streak', '{"giorni":200}'),
+  ('giorni-365', '365 giorni consecutivi', 365, 'streak', '{"giorni":365}')
+on conflict (id) do nothing;
+
+-- ─── Esercizi (63 varianti) ───────────────────────────────────────────────────
+insert into esercizi (id, categoria_id, titolo, difficolta, livello, famiglia, durata_stimata, beneficio, config) values
+
+-- SEQUENCE TAP
+('sequence-tap-numeri',   'memoria', 'Sequenza di Numeri',   'facile', 1, 'sequence_tap', 180, 'Allena la memoria di lavoro verbale e visuo-sequenziale.', '{"game":"sequence_tap","stimulusType":"numeri"}'),
+('sequence-tap-parole',   'memoria', 'Sequenza di Parole',   'facile', 1, 'sequence_tap', 180, 'Allena la memoria di lavoro verbale.',                    '{"game":"sequence_tap","stimulusType":"parole"}'),
+('sequence-tap-immagini', 'memoria', 'Sequenza di Immagini', 'facile', 1, 'sequence_tap', 180, 'Allena la memoria visuo-sequenziale.',                    '{"game":"sequence_tap","stimulusType":"immagini"}'),
+
+-- RECALL GRID
+('recall-grid-numeri', 'memoria', 'Griglia di Numeri', 'facile', 1, 'recall_grid', 180, 'Allena la memoria visuospaziale a breve termine.', '{"game":"recall_grid","stimulusType":"numeri"}'),
+('recall-grid-parole', 'memoria', 'Griglia di Parole', 'facile', 1, 'recall_grid', 180, 'Allena la memoria visuospaziale e verbale.',       '{"game":"recall_grid","stimulusType":"parole"}'),
+
+-- ODD ONE OUT
+('odd-one-out-numeri-lettere', 'attenzione', 'Trova l''Intruso — Cifre e Lettere', 'facile', 1, 'odd_one_out', 180, 'Allena l''attenzione selettiva e la ricerca visiva.',          '{"game":"odd_one_out","stimulusType":"numeri_lettere"}'),
+('odd-one-out-parole',         'attenzione', 'Trova l''Intruso — Parole',          'medio',  1, 'odd_one_out', 180, 'Allena l''attenzione selettiva e il riconoscimento lessicale.', '{"game":"odd_one_out","stimulusType":"parole"}'),
+('odd-one-out-forme',          'attenzione', 'Trova l''Intruso — Forme',           'facile', 1, 'odd_one_out', 180, 'Allena la percezione visiva e la discriminazione delle forme.', '{"game":"odd_one_out","stimulusType":"forme"}'),
+
+-- SORT IT
+('sort-it-colore',     'esecutive', 'Sort It — Colori',     'facile',    1, 'sort_it', 180, 'Allena la flessibilità cognitiva e l''inibizione delle risposte automatiche.', '{"game":"sort_it","stimulusType":"colore"}'),
+('sort-it-forma',      'esecutive', 'Sort It — Forme',      'facile',    1, 'sort_it', 180, 'Allena la flessibilità cognitiva e l''inibizione.',                           '{"game":"sort_it","stimulusType":"forma"}'),
+('sort-it-numero',     'esecutive', 'Sort It — Numeri',     'medio',     1, 'sort_it', 180, 'Allena la flessibilità cognitiva e il ragionamento numerico.',                '{"game":"sort_it","stimulusType":"numero"}'),
+('sort-it-texture',    'esecutive', 'Sort It — Texture',    'medio',     1, 'sort_it', 180, 'Allena la flessibilità cognitiva e la percezione visiva.',                    '{"game":"sort_it","stimulusType":"texture"}'),
+('sort-it-dimensione', 'esecutive', 'Sort It — Dimensione', 'difficile', 1, 'sort_it', 180, 'Allena la flessibilità cognitiva e la comparazione visiva.',                  '{"game":"sort_it","stimulusType":"dimensione"}'),
+
+-- HAYLING
+('hayling-quotidiano', 'esecutive', 'Hayling',                               'medio',     1, 'hayling', 180, 'Allena il controllo inibitorio e la soppressione delle risposte automatiche.', '{"game":"hayling","sentenceType":"frasi_quotidiane"}'),
+('hayling-narrativo',  'esecutive', 'Hayling — Frasi Narrative',             'medio',     1, 'hayling', 180, 'Allena il controllo inibitorio su testi narrativi.',                           '{"game":"hayling","sentenceType":"frasi_narrative"}'),
+('hayling-tecnico',    'esecutive', 'Hayling — Frasi Tecnico-Scientifiche',  'difficile', 1, 'hayling', 180, 'Allena il controllo inibitorio su contenuti specialistici.',                   '{"game":"hayling","sentenceType":"frasi_tecnico_scientifiche"}'),
+
+-- PASAT LIGHT
+('pasat-light-single', 'attenzione', 'PASAT — Cifre',        'medio',     1, 'pasat_light', 180, 'Allena la memoria di lavoro aritmetica e l''attenzione sostenuta.', '{"game":"pasat_light","digitType":"single"}'),
+('pasat-light-double', 'attenzione', 'PASAT — Cifre Doppie', 'difficile', 1, 'pasat_light', 180, 'Allena la memoria di lavoro aritmetica con numeri più complessi.',  '{"game":"pasat_light","digitType":"double"}'),
+
+-- UPDATING WM
+('updating-wm-numeri',           'memoria', 'Memoria in Aggiornamento',          'medio',     1, 'updating_wm', 180, 'Allena la memoria di lavoro e la capacità di aggiornare le informazioni.', '{"game":"updating_wm","stimulusType":"numerici"}'),
+('updating-wm-parole-living',    'memoria', 'Aggiornamento WM — Esseri Viventi', 'medio',     1, 'updating_wm', 180, 'Allena l''aggiornamento della memoria di lavoro con parole semantiche.',   '{"game":"updating_wm","stimulusType":"parole_living"}'),
+('updating-wm-parole-non-living','memoria', 'Aggiornamento WM — Oggetti',        'medio',     1, 'updating_wm', 180, 'Allena l''aggiornamento della memoria di lavoro con oggetti inanimati.',   '{"game":"updating_wm","stimulusType":"parole_non_living"}'),
+('updating-wm-parole-miste',     'memoria', 'Aggiornamento WM — Parole Miste',   'difficile', 1, 'updating_wm', 180, 'Allena l''aggiornamento della memoria di lavoro con categorie miste.',     '{"game":"updating_wm","stimulusType":"parole_miste"}'),
+('updating-wm-misti',            'memoria', 'Aggiornamento WM — Stimoli Misti',  'difficile', 1, 'updating_wm', 180, 'Allena la memoria di lavoro con switching tra domini.',                    '{"game":"updating_wm","stimulusType":"misti"}'),
+
+-- MEMORIA DI PROSA
+('memoria-prosa-narrativi',   'memoria', 'Memoria di Prosa',                'facile', 1, 'memoria_di_prosa', 180, 'Allena la comprensione e la memoria del testo.',                '{"game":"memoria_di_prosa","textType":"narrativi"}'),
+('memoria-prosa-descrittivi', 'memoria', 'Memoria di Prosa — Descrittiva',  'facile', 1, 'memoria_di_prosa', 180, 'Allena la memoria episodica verbale su testi descrittivi.',      '{"game":"memoria_di_prosa","textType":"descrittivi"}'),
+('memoria-prosa-procedurali', 'memoria', 'Memoria di Prosa — Procedurale',  'medio',  1, 'memoria_di_prosa', 180, 'Allena la memoria episodica verbale su testi procedurali.',      '{"game":"memoria_di_prosa","textType":"procedurali"}'),
+
+-- MEMORIA LISTA
+('memoria-lista-parole',            'memoria', 'Memoria Lista Parole',             'facile', 1, 'memoria_lista', 180, 'Allena la memoria verbale a lungo termine e il riconoscimento.',  '{"game":"memoria_lista","stimulusType":"parole_non_correlate"}'),
+('memoria-lista-parole-semantiche', 'memoria', 'Memoria Lista — Parole Semantiche','facile', 1, 'memoria_lista', 180, 'Allena la memoria episodica con organizzazione semantica.',        '{"game":"memoria_lista","stimulusType":"parole_semantiche"}'),
+('memoria-lista-numeri',            'memoria', 'Memoria Lista — Numeri',           'medio',  1, 'memoria_lista', 180, 'Allena la memoria numerica e il riconoscimento sequenziale.',      '{"game":"memoria_lista","stimulusType":"numeri"}'),
+('memoria-lista-parole-living',     'memoria', 'Memoria Lista — Esseri Viventi',   'facile', 1, 'memoria_lista', 180, 'Allena la memoria categoriale per entità animate.',                '{"game":"memoria_lista","stimulusType":"parole_living"}'),
+('memoria-lista-parole-non-living', 'memoria', 'Memoria Lista — Oggetti',          'facile', 1, 'memoria_lista', 180, 'Allena la memoria categoriale per oggetti inanimati.',             '{"game":"memoria_lista","stimulusType":"parole_non_living"}'),
+('memoria-lista-immagini',          'memoria', 'Memoria Lista — Immagini',         'facile', 1, 'memoria_lista', 180, 'Allena la memoria visiva e il riconoscimento di immagini.',        '{"game":"memoria_lista","stimulusType":"immagini"}'),
+
+-- MEMORIA PROSPETTICA
+('memoria-prospettica-visiva',     'memoria', 'Memoria Prospettica',              'medio',     1, 'memoria_prospettica', 180, 'Allena la memoria prospettica e la gestione dei compiti secondari.', '{"game":"memoria_prospettica","cueType":"visivo_saliente"}'),
+('memoria-prospettica-semantica',  'memoria', 'Memoria Prospettica — Semantica',  'medio',     1, 'memoria_prospettica', 180, 'Allena la memoria prospettica con cue semantici.',                    '{"game":"memoria_prospettica","cueType":"semantico"}'),
+('memoria-prospettica-time-based', 'memoria', 'Memoria Prospettica — A Tempo',    'difficile', 1, 'memoria_prospettica', 180, 'Allena la memoria prospettica basata sul tempo.',                     '{"game":"memoria_prospettica","cueType":"time_based"}'),
+
+-- SART
+('sart-cifre', 'attenzione', 'SART — Reazione', 'facile', 1, 'sart', 180, 'Allena l''inibizione delle risposte e l''attenzione sostenuta.', '{"game":"sart"}'),
+
+-- GO NO-GO
+('go-nogo-cromatico',  'esecutive', 'Go / No-Go Colori',       'facile',    1, 'go_nogo', 180, 'Allena l''inibizione e il controllo delle risposte impulsive.',       '{"game":"go_nogo","stimulusType":"cromatico"}'),
+('go-nogo-semantico',  'esecutive', 'Go / No-Go — Semantico',  'medio',     1, 'go_nogo', 180, 'Allena l''inibizione semantica e l''attenzione selettiva.',          '{"game":"go_nogo","stimulusType":"semantico"}'),
+('go-nogo-multimodale','esecutive', 'Go / No-Go — Multimodale','difficile', 1, 'go_nogo', 180, 'Allena l''inibizione divisa su più canali sensoriali.',              '{"game":"go_nogo","stimulusType":"multimodale"}'),
+('go-nogo-lessicale',  'esecutive', 'Go / No-Go — Lessicale',  'medio',     1, 'go_nogo', 180, 'Allena l''inibizione lessicale e la decisione rapida sulle parole.', '{"game":"go_nogo","stimulusType":"lessicale"}'),
+
+-- DUAL TASK
+('dual-task', 'attenzione', 'Doppio Compito', 'difficile', 1, 'dual_task', 180, 'Allena la divisione dell''attenzione e la gestione di compiti multipli.', '{"game":"dual_task"}'),
+
+-- VIGILANCE
+('vigilance', 'attenzione', 'Vigilanza', 'medio', 1, 'vigilance', 180, 'Allena l''attenzione sostenuta e la vigilanza nel tempo.', '{"game":"vigilance"}'),
+
+-- STROOP
+('stroop-color-word', 'esecutive', 'Stroop — Colore e Parola', 'medio', 1, 'stroop', 180, 'Allena l''inibizione e il controllo dell''interferenza automatica.', '{"game":"stroop_color_word"}'),
+('stroop-spatial',    'esecutive', 'Stroop Spaziale',          'medio', 1, 'stroop', 180, 'Allena il controllo dell''interferenza spaziale (effetto Simon).',  '{"game":"spatial_stroop"}'),
+
+-- TASK SWITCHING
+('task-switching-numeri', 'esecutive', 'Task Switching', 'medio', 1, 'task_switching', 180, 'Allena la flessibilità cognitiva e la capacità di cambiare strategia.', '{"game":"task_switching"}'),
+
+-- FLANKER
+('flanker-frecce', 'attenzione', 'Flanker — Frecce', 'facile', 1, 'flanker', 180, 'Allena l''attenzione selettiva e il controllo dell''interferenza.', '{"game":"flanker"}'),
+
+-- DCCS LIGHT
+('dccs-light', 'esecutive', 'DCCS — Classifica Carte', 'facile', 1, 'dccs_light', 180, 'Allena la flessibilità cognitiva e la capacità di seguire regole.', '{"game":"dccs_light"}'),
+
+-- PIANIFICAZIONE
+('pianificazione-tol',    'esecutive', 'Torre di Londra',             'facile',    1, 'pianificazione', 180, 'Allena la pianificazione, la previsione e il problem solving.', '{"game":"pianificazione","variant":"tower_of_london"}'),
+('pianificazione-brixton','esecutive', 'Brixton — Anticipa il Punto', 'difficile', 1, 'pianificazione', 180, 'Allena il ragionamento induttivo e la pianificazione spaziale.',  '{"game":"pianificazione","variant":"brixton"}'),
+
+-- VERBAL FLUENCY
+('verbal-fluency-categoriale', 'linguaggio', 'Fluenza Verbale',             'facile',    1, 'verbal_fluency', 180, 'Allena il recupero lessicale e la fluidità verbale.',                  '{"game":"verbal_fluency","variant":"categoriale"}'),
+('verbal-fluency-alternata',   'linguaggio', 'Fluenza Verbale — Alternata', 'difficile', 1, 'verbal_fluency', 180, 'Allena la flessibilità cognitiva e il recupero lessicale alternato.', '{"game":"verbal_fluency","variant":"alternata"}'),
+('verbal-fluency-fonemica',    'linguaggio', 'Fluenza Verbale — Fonemica',  'medio',     1, 'verbal_fluency', 180, 'Allena la fluenza fonemica e il recupero lessicale fonologico.',      '{"game":"verbal_fluency","variant":"fonemica"}'),
+
+-- LINGUAGGIO
+('linguaggio-naming',               'linguaggio', 'Naming',               'facile', 1, 'linguaggio', 180, 'Allena il recupero dei nomi e il vocabolario attivo.',                      '{"game":"linguaggio","variant":"naming"}'),
+('linguaggio-lexical-decision',     'linguaggio', 'Decisione Lessicale',  'medio',  1, 'linguaggio', 180, 'Allena il riconoscimento lessicale e la velocità di elaborazione.',          '{"game":"linguaggio","variant":"lexical_decision"}'),
+('linguaggio-sentence-anagram',     'linguaggio', 'Anagramma di Frase',   'medio',  1, 'linguaggio', 180, 'Allena la comprensione sintattica e la memoria di lavoro verbale.',          '{"game":"linguaggio","variant":"sentence_anagram"}'),
+('linguaggio-semantic-relatedness', 'linguaggio', 'Relazione Semantica',  'facile', 1, 'linguaggio', 180, 'Allena la memoria semantica e l''associazione concettuale.',                 '{"game":"linguaggio","variant":"semantic_relatedness"}'),
+('linguaggio-proverb-completion',   'linguaggio', 'Proverbi',             'facile', 1, 'linguaggio', 180, 'Allena la memoria culturale semantica e la conoscenza idiomatica.',          '{"game":"linguaggio","variant":"proverb_completion"}'),
+
+-- MENTAL ROTATION
+('mental-rotation-forme',      'visuospaziali', 'Rotazione Mentale',              'facile',    1, 'mental_rotation', 180, 'Allena la rotazione mentale e la percezione spaziale.',                  '{"game":"mental_rotation","stimulusType":"forme"}'),
+('mental-rotation-oggetti-3d', 'visuospaziali', 'Rotazione Mentale — Oggetti 3D', 'difficile', 1, 'mental_rotation', 180, 'Allena la rotazione mentale su oggetti tridimensionali complessi.',      '{"game":"mental_rotation","stimulusType":"oggetti_3d"}'),
+
+-- FIGURE GROUND
+('figure-ground-forme',   'visuospaziali', 'Figura e Sfondo',           'facile', 1, 'figure_ground', 180, 'Allena la percezione visiva e la discriminazione figura-sfondo.', '{"game":"figure_ground","stimulusType":"forme"}'),
+('figure-ground-oggetti', 'visuospaziali', 'Figura e Sfondo — Oggetti', 'medio',  1, 'figure_ground', 180, 'Allena la percezione figura-sfondo su scene realistiche.',         '{"game":"figure_ground","stimulusType":"oggetti"}'),
+
+-- BLOCK DESIGN
+('block-design-colori', 'visuospaziali', 'Block Design',               'facile', 1, 'block_design', 180, 'Allena la costruzione visuospaziale e la memoria visiva.',        '{"game":"block_design","stimulusType":"colori"}'),
+('block-design-bw',     'visuospaziali', 'Block Design — Bianco e Nero','medio', 1, 'block_design', 180, 'Allena la costruzione visuospaziale senza l''aiuto del colore.', '{"game":"block_design","stimulusType":"bw"}')
+
+on conflict (id) do nothing;

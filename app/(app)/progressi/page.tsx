@@ -1,10 +1,12 @@
 "use client";
+export const dynamic = "force-dynamic";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Card from "@/components/ui/card";
-import { mockMedaglie, mockProgressiSettimanali, mockScoreCategorie, mockStoricoGiornaliero, mockTotaleSettimanaScorsa, mockEsercizioDelGiorno, mockCategorie } from "@/lib/mock-data";
+import { mockMedaglie, mockCategorie } from "@/lib/mock-data";
+import { fetchDatiProgressi, type ScoreCategoria, type StoricoGiorno } from "@/lib/sync";
 import { useUserStore } from "@/lib/store";
 import { COLORS, CATEGORIA_COLORS } from "@/lib/design-tokens";
 import { AppIcon } from "@/lib/icons";
@@ -27,30 +29,30 @@ function buildCalendarCells(year: number, month: number): (number | null)[] {
   return cells;
 }
 
-function getAllCompletatiDates(): Set<string> {
+function getAllCompletatiDates(storico: StoricoGiorno[]): Set<string> {
   const set = new Set<string>();
-  for (const g of mockStoricoGiornaliero) {
+  for (const g of storico) {
     if (g.sessioni.length >= 5) set.add(g.data);
   }
   return set;
 }
 
-function getAllAttivitaDates(): Set<string> {
+function getAllAttivitaDates(storico: StoricoGiorno[]): Set<string> {
   const set = new Set<string>();
-  for (const g of mockStoricoGiornaliero) {
+  for (const g of storico) {
     if (g.sessioni.length > 0) set.add(g.data);
   }
   return set;
 }
 
-function buildStreakFromStorico(): number {
+function buildStreakFromStorico(storico: StoricoGiorno[]): number {
   const now = new Date();
   let streak = 0;
   for (let i = 0; i < 365; i++) {
     const d = new Date(now);
     d.setDate(now.getDate() - i);
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    if (mockStoricoGiornaliero.some((g) => g.data === dateStr && g.sessioni.length > 0)) {
+    if (storico.some((g) => g.data === dateStr && g.sessioni.length > 0)) {
       streak++;
     } else {
       break;
@@ -63,11 +65,13 @@ function CalendarioMensile({
   streak,
   selectedDate,
   onDaySelect,
+  storicoSessioni,
   children,
 }: {
   streak: number;
   selectedDate: string | null;
   onDaySelect: (date: string) => void;
+  storicoSessioni: StoricoGiorno[];
   children?: React.ReactNode;
 }) {
   const [meseOffset, setMeseOffset] = useState(0);
@@ -81,8 +85,8 @@ function CalendarioMensile({
   const month = displayDate.getMonth();
   const isCurrentMonth = year === currentYear && month === currentMonth;
 
-  const completatiSet = getAllCompletatiDates();
-  const attivitaSet = getAllAttivitaDates();
+  const completatiSet = getAllCompletatiDates(storicoSessioni);
+  const attivitaSet = getAllAttivitaDates(storicoSessioni);
   const cells = buildCalendarCells(year, month);
   const HEADER = ["L", "M", "M", "G", "V", "S", "D"];
 
@@ -252,7 +256,7 @@ function buildPeriodData(storico: StoricoEntry[], periodo: Periodo): { label: st
     if (!byMonth.has(key)) byMonth.set(key, []);
     byMonth.get(key)!.push(s.livello);
   }
-  return [...byMonth.entries()].map(([label, levels]) => ({
+  return Array.from(byMonth.entries()).map(([label, levels]) => ({
     label,
     livello: Math.round(levels.reduce((a, b) => a + b, 0) / levels.length),
   }));
@@ -286,9 +290,11 @@ const TREND_TEXTS: Record<string, Record<string, string>> = {
   },
 };
 
-function AreaCerebraleCard({ cat }: { cat: typeof mockScoreCategorie[0] }) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function AreaCerebraleCard({ cat }: { cat: ScoreCategoria }) {
   const [periodo, setPeriodo] = useState<Periodo>("settimana");
   const cc = CATEGORIA_COLORS[cat.categoria.toLowerCase()];
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const trendLabel = { crescita: "↑ In crescita", stabile: "→ Stabile", calo: "↓ In calo" }[cat.trend];
   const testoTrend = TREND_TEXTS[cat.categoria]?.[cat.trend] ?? "";
   const dati = cat.storico.slice(-SLICE[periodo]);
@@ -309,7 +315,7 @@ function AreaCerebraleCard({ cat }: { cat: typeof mockScoreCategorie[0] }) {
       </div>
       <div className="flex gap-2 mb-3">
         <StatCell value={String(cat.sessioni)} label="Sessioni" color={cc?.text ?? COLORS.primary} />
-        <StatCell value={`${cat.livello}/6`} label="Livello" color={cc?.text ?? COLORS.primary} />
+        <StatCell value={`${cat.livello}/20`} label="Livello" color={cc?.text ?? COLORS.primary} />
       </div>
 
       {/* Box bianco con grafico (sempre visibile) */}
@@ -374,26 +380,27 @@ function AreaCerebraleCard({ cat }: { cat: typeof mockScoreCategorie[0] }) {
 const NOMI_GIORNO_IT = ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"];
 const MESI_SHORT_IT  = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
 
-// mockStoricoGiornaliero è ordinato dal più recente al più vecchio
-function getPreviousScore(data: string, categoria: string): number | null {
-  const idx = mockStoricoGiornaliero.findIndex((g) => g.data === data);
-  const start = idx === -1 ? mockStoricoGiornaliero.length : idx + 1;
-  for (let i = start; i < mockStoricoGiornaliero.length; i++) {
-    const found = mockStoricoGiornaliero[i].sessioni.find((s) => s.categoria === categoria);
+// storicoSessioni è ordinato dal più recente al più vecchio
+function getPreviousScore(storico: StoricoGiorno[], data: string, categoria: string): number | null {
+  const idx = storico.findIndex((g) => g.data === data);
+  const start = idx === -1 ? storico.length : idx + 1;
+  for (let i = start; i < storico.length; i++) {
+    const found = storico[i].sessioni.find((s) => s.categoria === categoria);
     if (found) return found.score;
   }
   return null;
 }
 
-function TrendArrow({ data, categoria, score }: { data: string; categoria: string; score: number }) {
-  const prev = getPreviousScore(data, categoria);
+function TrendArrow({ storico, data, categoria, score }: { storico: StoricoGiorno[]; data: string; categoria: string; score: number }) {
+  const prev = getPreviousScore(storico, data, categoria);
   if (prev === null) return null;
   const symbol = score > prev ? "↑" : score < prev ? "↓" : "→";
   const color  = score > prev ? COLORS.success : score < prev ? "#DC2626" : COLORS.inkMuted;
   return <span className="text-xs font-semibold" style={{ color }}>{symbol}</span>;
 }
 
-function StoricoGiornaliero() {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function StoricoGiornaliero({ storicoSessioni }: { storicoSessioni: StoricoGiorno[] }) {
   const now = new Date();
   const jsDay = now.getDay();
   const daysFromMonday = jsDay === 0 ? 6 : jsDay - 1;
@@ -406,7 +413,7 @@ function StoricoGiornaliero() {
     d.setDate(monday.getDate() + i);
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const isFuture = dateStr > todayStr;
-    const sessioni = isFuture ? [] : (mockStoricoGiornaliero.find((g) => g.data === dateStr)?.sessioni ?? []);
+    const sessioni = isFuture ? [] : (storicoSessioni.find((g) => g.data === dateStr)?.sessioni ?? []);
     const label = `${NOMI_GIORNO_IT[d.getDay()]} ${d.getDate()} ${MESI_SHORT_IT[d.getMonth()]}`;
     return { dateStr, label, isFuture, sessioni };
   });
@@ -434,7 +441,7 @@ function StoricoGiornaliero() {
                           <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cc?.text ?? COLORS.primary }} />
                           <span className="text-sm font-medium text-ink flex-1">{s.categoria}</span>
                           <span className="text-xs font-semibold" style={{ color: cc?.text ?? COLORS.primary }}>{s.score}%</span>
-                          <TrendArrow data={dateStr} categoria={s.categoria} score={s.score} />
+                          <TrendArrow storico={storicoSessioni} data={dateStr} categoria={s.categoria} score={s.score} />
                         </div>
                       );
                     })}
@@ -448,9 +455,8 @@ function StoricoGiornaliero() {
   );
 }
 
-function DettaglioGiorno({ dateStr }: { dateStr: string }) {
-  // TODO: sostituire con fetch da Supabase — SELECT * FROM sessioni WHERE data = dateStr
-  const sessioni = mockStoricoGiornaliero.find((g) => g.data === dateStr)?.sessioni ?? [];
+function DettaglioGiorno({ dateStr, storicoSessioni, esercizioDelGiornoId }: { dateStr: string; storicoSessioni: StoricoGiorno[]; esercizioDelGiornoId: string }) {
+  const sessioni = storicoSessioni.find((g) => g.data === dateStr)?.sessioni ?? [];
   const d = new Date(dateStr);
   const label = `${NOMI_GIORNO_IT[d.getDay()]} ${d.getDate()} ${MESI_SHORT_IT[d.getMonth()]}`;
 
@@ -468,7 +474,7 @@ function DettaglioGiorno({ dateStr }: { dateStr: string }) {
               Ancora nessuna attività oggi
             </p>
             <Link
-              href={`/esercizi/${mockEsercizioDelGiorno.id}`}
+              href={`/esercizi/${esercizioDelGiornoId}`}
               className="text-base font-semibold underline"
               style={{ color: COLORS.primary }}
             >
@@ -497,7 +503,7 @@ function DettaglioGiorno({ dateStr }: { dateStr: string }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-base font-normal text-ink truncate">{s.nome_esercizio}</p>
-                  <p className="text-xs mt-0.5" style={{ color: COLORS.inkMuted }}>{catLabel} · Livello {s.livello}/6</p>
+                  <p className="text-xs mt-0.5" style={{ color: COLORS.inkMuted }}>{catLabel} · Livello {s.livello}/20</p>
                 </div>
               </div>
             );
@@ -507,29 +513,6 @@ function DettaglioGiorno({ dateStr }: { dateStr: string }) {
     </div>
   );
 }
-
-const totaleSettimana = mockProgressiSettimanali.reduce((a, g) => a + g.esercizi, 0);
-
-// ── Dati globali cervello ─────────────────────────────────────────────────────
-const globalScore = Math.round(
-  mockScoreCategorie.reduce((sum, c) => sum + c.score, 0) / mockScoreCategorie.length
-);
-const globalSessioni = mockScoreCategorie.reduce((sum, c) => sum + c.sessioni, 0);
-const globalStorico = mockScoreCategorie[0].storico.map((entry, i) => ({
-  label: entry.label,
-  score: Math.round(
-    mockScoreCategorie.reduce((sum, c) => sum + (c.storico[i]?.score ?? 0), 0) / mockScoreCategorie.length
-  ),
-}));
-const globalTrend: "crescita" | "stabile" | "calo" = (() => {
-  const first = globalStorico[0]?.score ?? 0;
-  const last = globalStorico[globalStorico.length - 1]?.score ?? 0;
-  if (last > first + 2) return "crescita";
-  if (last < first - 2) return "calo";
-  return "stabile";
-})();
-
-const sfereCrescita = mockScoreCategorie.filter((c) => c.trend === "crescita").length;
 
 const TREND_ARROW: Record<string, string> = { crescita: "↑", stabile: "→", calo: "↓" };
 const TREND_TEXT:  Record<string, string> = { crescita: "In crescita", stabile: "Stabile", calo: "In calo" };
@@ -551,9 +534,31 @@ const CERVELLO_TEXTS: Record<string, string> = {
   calo:     "Hai bisogno di un po' di allenamento. Non preoccuparti, riprendi gli esercizi e i risultati arriveranno!",
 };
 
-function CervelloGlobaleCard() {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function CervelloGlobaleCard({ scoreCategorie }: { scoreCategorie: ScoreCategoria[] }) {
   const [periodo, setPeriodo] = useState<Periodo>("settimana");
-  const trendLabel = { crescita: "↑ In crescita", stabile: "→ Stabile", calo: "↓ In calo" }[globalTrend];
+
+  const globalScore = scoreCategorie.length > 0
+    ? Math.round(scoreCategorie.reduce((sum, c) => sum + c.score, 0) / scoreCategorie.length)
+    : 0;
+  const globalSessioni = scoreCategorie.reduce((sum, c) => sum + c.sessioni, 0);
+  const globalStorico = scoreCategorie.length > 0
+    ? scoreCategorie[0].storico.map((entry, i) => ({
+        label: entry.label,
+        score: Math.round(
+          scoreCategorie.reduce((sum, c) => sum + (c.storico[i]?.score ?? 0), 0) / scoreCategorie.length
+        ),
+      }))
+    : [];
+  const globalTrend: "crescita" | "stabile" | "calo" = (() => {
+    const first = globalStorico[0]?.score ?? 0;
+    const last = globalStorico[globalStorico.length - 1]?.score ?? 0;
+    if (last > first + 2) return "crescita";
+    if (last < first - 2) return "calo";
+    return "stabile";
+  })();
+  const sfereCrescita = scoreCategorie.filter((c) => c.trend === "crescita").length;
+
   const dati = globalStorico.slice(-SLICE[periodo]);
   const PERIODI: Periodo[] = ["settimana", "mese", "anno"];
 
@@ -673,20 +678,20 @@ function FiltroPills({ filtro, setFiltro }: { filtro: FiltroAttivita; setFiltro:
   );
 }
 
-function AttivitaTab({ filtro: filtroExt, setFiltro: setFiltroExt, hidePills }: {
+function AttivitaTab({ filtro: filtroExt, setFiltro: setFiltroExt, hidePills, scoreCategorie }: {
   filtro?: FiltroAttivita;
   setFiltro?: (f: FiltroAttivita) => void;
   hidePills?: boolean;
-} = {}) {
+  scoreCategorie: ScoreCategoria[];
+}) {
   const [filtroInt, setFiltroInt] = useState<FiltroAttivita>("tutti");
   const filtro    = filtroExt    ?? filtroInt;
   const setFiltro = setFiltroExt ?? setFiltroInt;
   const [periodo, setPeriodo] = useState<Periodo>("settimana");
 
-  // TODO: sostituire con query Supabase — SELECT categoria, livello, trend, sessioni FROM progressi WHERE utente_id = ?
   const filteredCats = filtro === "tutti"
-    ? mockScoreCategorie
-    : mockScoreCategorie.filter((c) => c.categoria.toLowerCase() === filtro);
+    ? scoreCategorie
+    : scoreCategorie.filter((c) => c.categoria.toLowerCase() === filtro);
 
   const activeColor = filtro === "tutti"
     ? COLORS.primary
@@ -695,10 +700,11 @@ function AttivitaTab({ filtro: filtroExt, setFiltro: setFiltroExt, hidePills }: 
   // Build chart data
   const chartData = filtro === "tutti"
     ? (() => {
-        const refData = buildPeriodData(mockScoreCategorie[0].storicoLivello, periodo);
+        if (scoreCategorie.length === 0) return [];
+        const refData = buildPeriodData(scoreCategorie[0].storicoLivello, periodo);
         return refData.map((point, i) => {
           const obj: Record<string, unknown> = { label: point.label };
-          mockScoreCategorie.forEach((cat) => {
+          scoreCategorie.forEach((cat) => {
             const catData = buildPeriodData(cat.storicoLivello, periodo);
             obj[cat.categoria] = catData[i]?.livello ?? undefined;
           });
@@ -706,12 +712,12 @@ function AttivitaTab({ filtro: filtroExt, setFiltro: setFiltroExt, hidePills }: 
         });
       })()
     : buildPeriodData(
-        mockScoreCategorie.find((c) => c.categoria.toLowerCase() === filtro)?.storicoLivello ?? [],
+        scoreCategorie.find((c) => c.categoria.toLowerCase() === filtro)?.storicoLivello ?? [],
         periodo
       ).map((d) => ({ label: d.label, livello: d.livello ?? undefined }));
 
   // Stats
-  const livelloMedio       = Math.round(filteredCats.reduce((s, c) => s + c.livello, 0) / filteredCats.length);
+  const livelloMedio       = filteredCats.length > 0 ? Math.round(filteredCats.reduce((s, c) => s + c.livello, 0) / filteredCats.length) : 0;
   const dominiInCrescita   = filteredCats.filter((c) => c.trend === "crescita").length;
   const sessioniTotali     = filteredCats.reduce((s, c) => s + c.sessioni, 0);
 
@@ -753,7 +759,7 @@ function AttivitaTab({ filtro: filtroExt, setFiltro: setFiltroExt, hidePills }: 
                 formatter={(v, name) => [v != null ? `L.${v}` : "", name]}
               />
               {filtro === "tutti"
-                ? mockScoreCategorie.map((cat) => {
+                ? scoreCategorie.map((cat) => {
                     const cc = CATEGORIA_COLORS[cat.categoria.toLowerCase()];
                     return (
                       <Line
@@ -895,14 +901,31 @@ function FlameNumerata({ numero, guadagnata, size = 52 }: { numero: number; guad
 
 type Tab = "attivita" | "storico" | "medaglie";
 
-export default function ProgressiPage() {
+function ProgressiPageContent() {
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>((searchParams.get("tab") as Tab) ?? "attivita");
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const [selectedDate, setSelectedDate] = useState<string | null>(todayStr);
   const [filtroGuest, setFiltroGuest] = useState<FiltroAttivita>("tutti");
-  const { streak, isGuest } = useUserStore();
+  const { streak, isGuest, userId, eserciziDelGiorno, progressiSettimanali } = useUserStore();
+
+  // Dati reali da Supabase
+  const [scoreCategorie, setScoreCategorie] = useState<ScoreCategoria[]>([]);
+  const [storicoSessioni, setStoricoSessioni] = useState<StoricoGiorno[]>([]);
+  const [totaleSettimanaScorsa, setTotaleSettimanaScorsa] = useState(0);
+
+  useEffect(() => {
+    if (isGuest || !userId) return;
+    fetchDatiProgressi(userId).then((d) => {
+      setScoreCategorie(d.scoreCategorie);
+      setStoricoSessioni(d.storicoSessioni);
+      setTotaleSettimanaScorsa(d.totaleSettimanaScorsa);
+    });
+  }, [userId, isGuest]);
+
+  const totaleSettimana = progressiSettimanali.reduce((a, g) => a + g.esercizi, 0);
+  const esercizioDelGiornoId = eserciziDelGiorno.find((e) => !e.completato)?.id ?? eserciziDelGiorno[0]?.id ?? "";
 
   useEffect(() => {
     const t = searchParams.get("tab") as Tab | null;
@@ -956,14 +979,14 @@ export default function ProgressiPage() {
         {/* ── Tab: Attività ────────────────────────────────────────── */}
         {tab === "attivita" && (
           isGuest
-            ? <AttivitaTab filtro={filtroGuest} setFiltro={setFiltroGuest} hidePills={true} />
-            : <AttivitaTab />
+            ? <AttivitaTab filtro={filtroGuest} setFiltro={setFiltroGuest} hidePills={true} scoreCategorie={scoreCategorie} />
+            : <AttivitaTab scoreCategorie={scoreCategorie} />
         )}
 
         {/* ── Tab: Storico ──────────────────────────────────────────── */}
         {tab === "storico" && (() => {
           // TODO: sostituire con query Supabase — SELECT count(*) FROM sessioni WHERE data >= inizio_settimana / settimana_scorsa
-          const diff = totaleSettimana - mockTotaleSettimanaScorsa;
+          const diff = totaleSettimana - totaleSettimanaScorsa;
           const stato: "meglio" | "stabile" | "peggio" =
             diff > 0 ? "meglio" : diff === 0 ? "stabile" : "peggio";
 
@@ -994,9 +1017,10 @@ export default function ProgressiPage() {
           return (
             <>
               <CalendarioMensile
-                streak={buildStreakFromStorico()}
+                streak={buildStreakFromStorico(storicoSessioni)}
                 selectedDate={selectedDate}
                 onDaySelect={(d) => setSelectedDate(d || null)}
+                storicoSessioni={storicoSessioni}
               >
                 <div className="rounded-xl p-4 flex flex-col gap-1" style={{ backgroundColor: stateConfig.bg }}>
                   <div className="flex items-center gap-1.5">
@@ -1009,7 +1033,7 @@ export default function ProgressiPage() {
               {(() => {
                 const now = new Date();
                 const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-                return <DettaglioGiorno dateStr={selectedDate ?? todayStr} />;
+                return <DettaglioGiorno dateStr={selectedDate ?? todayStr} storicoSessioni={storicoSessioni} esercizioDelGiornoId={esercizioDelGiornoId} />;
               })()}
             </>
           );
@@ -1099,4 +1123,8 @@ export default function ProgressiPage() {
       </div>
     </div>
   );
+}
+
+export default function ProgressiPage() {
+  return <Suspense fallback={null}><ProgressiPageContent /></Suspense>;
 }

@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { COLORS } from "@/lib/design-tokens";
-import { mockMessaggiFamiliari } from "@/lib/mock-data";
 import { useUserStore } from "@/lib/store";
+import { segnaMessaggioLetto } from "@/lib/sync";
 import { ArrowLeft, Check } from "iconoir-react";
 
 // TODO: da Supabase — il campo relazione viene da familiari.relazione (impostato al momento dell'invito)
@@ -36,14 +36,16 @@ const FILTRO_LABEL: Record<Filtro, string> = {
 
 export default function MessaggiPage() {
   const router = useRouter();
-  const isGuest = useUserStore((s) => s.isGuest);
+  const { isGuest, messaggi, segnaMessaggioLettoLocale } = useUserStore();
   const [filtro, setFiltro] = useState<Filtro>("tutti");
   const [lettiLocali, setLettiLocali] = useState<Set<string>>(
-    () => new Set(mockMessaggiFamiliari.filter((m) => m.letto).map((m) => m.id))
+    () => new Set(messaggi.filter((m) => m.letto).map((m) => m.id))
   );
 
   function segnaLetto(id: string) {
     setLettiLocali((prev) => new Set(prev).add(id));
+    segnaMessaggioLettoLocale(id);
+    segnaMessaggioLetto(id);
   }
 
   useEffect(() => {
@@ -57,7 +59,7 @@ export default function MessaggiPage() {
     };
   }, [isGuest]);
 
-  const messaggiFiltrati = mockMessaggiFamiliari.filter((msg) => {
+  const messaggiFiltrati = messaggi.filter((msg) => {
     const letto = lettiLocali.has(msg.id);
     if (filtro === "da_leggere") return !letto;
     if (filtro === "letti") return letto;

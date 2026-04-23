@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { mockEserciziOggi } from "@/lib/mock-data";
+import type { EserciziDelGiornoItem, ProgressoGiorno, SessioneRecente, MessaggioReale } from "@/lib/sync";
 
 export type CanalNotifica = "whatsapp" | "sms" | "email";
 
@@ -17,6 +17,7 @@ export interface Familiare {
 }
 
 export interface UserState {
+  initialized: boolean; // true dopo che UserInit ha caricato i dati
   isGuest: boolean;
   userId: string | null;
   nome: string;
@@ -33,69 +34,104 @@ export interface UserState {
   esercizi_completati: number;
   familiari: Familiare[];
   eserciziFattiOggi: number;
+  // Dati reali da Supabase
+  eserciziDelGiorno: EserciziDelGiornoItem[];
+  userLevels: Record<string, number>;
+  progressiSettimanali: ProgressoGiorno[];
+  sessioniRecenti: SessioneRecente[];
   // flag cross-page: impostato da /esercizi per far aprire PausaAttivaView in /home
   pausaAttivaRichiesta: boolean;
   // timestamp (ms) di inizio pausa attiva — null = nessuna pausa in corso
   pausaAttivaInizio: number | null;
   // nasconde la BottomNav (es. quando un modal a schermo intero è aperto)
   navNascosta: boolean;
+  messaggi: MessaggioReale[];
 }
 
 interface UserStore extends UserState {
   setUser: (data: Partial<UserState>) => void;
+  setGuest: () => void;
   aggiungiMedaglia: (id: string) => void;
   aggiornaFamiliare: (id: string, data: Partial<Familiare>) => void;
   rimuoviFamiliare: (id: string) => void;
   setPausaAttivaRichiesta: (v: boolean) => void;
   setPausaAttivaInizio: (v: number | null) => void;
   setNavNascosta: (v: boolean) => void;
+  marcaEsercizioDelGiornoCompletato: (esercizioId: string) => void;
+  segnaMessaggioLettoLocale: (id: string) => void;
 }
 
 export const useUserStore = create<UserStore>((set) => ({
-  // Dati utente di default
+  initialized: false,
   isGuest: false,
   userId: null,
-  nome: "Mario",
+  nome: "",
   cognome: "",
-  telefono: "+39 333 1234567",
+  telefono: "",
   email: "",
-  anno_nascita: 1955,
+  anno_nascita: 0,
   orario_notifica: "09:00",
   canale_notifica: "whatsapp",
   consenso_notifiche: true,
-  medaglie: ["giorno-1", "giorni-2", "giorni-3", "giorni-7"],
-  streak: 8,
+  medaglie: [],
+  streak: 0,
   lastActivityDate: null,
-  esercizi_completati: 12,
-  eserciziFattiOggi: mockEserciziOggi, // TODO: da Supabase
+  esercizi_completati: 0,
+  eserciziFattiOggi: 0,
+  eserciziDelGiorno: [],
+  userLevels: {},
+  progressiSettimanali: [],
+  sessioniRecenti: [],
+  familiari: [],
   pausaAttivaRichiesta: false,
   pausaAttivaInizio: null,
   navNascosta: false,
-
-  // Familiari mock
-  familiari: [
-    {
-      id: "sara",
-      nome: "Sara",
-      relazione: "Figlia",
-      telefono: "+39 333 9876543",
-      collegato_at: new Date(Date.now() - 15 * 86_400_000).toISOString(),
-      permessi: { attivita: true, medaglie: true, progressi: true },
-    },
-    {
-      id: "luca",
-      nome: "Luca",
-      relazione: "Nipote",
-      telefono: "+39 347 1234567",
-      collegato_at: new Date(Date.now() - 3 * 86_400_000).toISOString(),
-      permessi: { attivita: true, medaglie: true, progressi: false },
-    },
-  ],
+  messaggi: [],
 
   setUser: (data) => set((s) => ({ ...s, ...data })),
+
+  setGuest: () => set({
+    initialized: true,
+    isGuest: true,
+    userId: null,
+    nome: "Ospite",
+    cognome: "",
+    telefono: "",
+    email: "",
+    anno_nascita: 0,
+    orario_notifica: "09:00",
+    canale_notifica: "whatsapp",
+    consenso_notifiche: false,
+    medaglie: [],
+    streak: 0,
+    lastActivityDate: null,
+    esercizi_completati: 0,
+    familiari: [],
+    eserciziFattiOggi: 0,
+    eserciziDelGiorno: [],
+    userLevels: {},
+    progressiSettimanali: [],
+    sessioniRecenti: [],
+    messaggi: [],
+    pausaAttivaRichiesta: false,
+    pausaAttivaInizio: null,
+  }),
+
   setPausaAttivaRichiesta: (v) => set({ pausaAttivaRichiesta: v }),
   setPausaAttivaInizio: (v) => set({ pausaAttivaInizio: v }),
   setNavNascosta: (v) => set({ navNascosta: v }),
+
+  marcaEsercizioDelGiornoCompletato: (esercizioId) =>
+    set((s) => ({
+      eserciziDelGiorno: s.eserciziDelGiorno.map((e) =>
+        e.id === esercizioId ? { ...e, completato: true } : e
+      ),
+    })),
+
+  segnaMessaggioLettoLocale: (id) =>
+    set((s) => ({
+      messaggi: s.messaggi.map((m) => m.id === id ? { ...m, letto: true } : m),
+    })),
 
   aggiungiMedaglia: (id) =>
     set((s) => ({

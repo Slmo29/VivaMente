@@ -151,7 +151,7 @@ export default function OnboardingDemoPage() {
             {mischiate.map((parola) => {
               const posCorretta = PAROLE.indexOf(parola);
               const corretto = tutteSelezionate && selezionate[posCorretta] === parola;
-              const sbagliato = tutteSelezionate && selezionate[posCorretta] !== parola;
+              const _sbagliato = tutteSelezionate && selezionate[posCorretta] !== parola; void _sbagliato;
               const usata = selezionate.includes(parola);
 
               if (tutteSelezionate) {

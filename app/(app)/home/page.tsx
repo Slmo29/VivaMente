@@ -3,14 +3,14 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Card from "@/components/ui/card";
+
 import Btn from "@/components/ui/btn";
 import { useUserStore } from "@/lib/store";
-import { mockEsercizioDelGiorno, mockEserciziDelGiornoList, mockCategorie, mockProgressiSettimanali, mockSessioniRecenti, mockMessaggiFamiliari, mockEsercizi, mockMedaglie } from "@/lib/mock-data";
+import { mockCategorie, mockMedaglie } from "@/lib/mock-data";
 import { CATEGORIA_COLORS, COLORS } from "@/lib/design-tokens";
 import { AppIcon } from "@/lib/icons";
-import { Timer, Running, Phone, Palette, Leaf, Lock, ChatLines, Check } from "iconoir-react";
-import { PausaAttivaModal, CheckCircles } from "@/components/ui/pausa-attiva-modal";
+import { Running, Phone, Palette, Leaf, Lock, ChatLines, Check } from "iconoir-react";
+import { PausaAttivaModal } from "@/components/ui/pausa-attiva-modal";
 
 function FlameNumerata({ numero, guadagnata, size = 48 }: { numero: number; guadagnata: boolean; size?: number }) {
   const uid = `hfg-${numero}`;
@@ -46,7 +46,6 @@ function FlameNumerata({ numero, guadagnata, size = 48 }: { numero: number; guad
 
 const GIORNO_INDEX: Record<string, number> = { Lun: 1, Mar: 2, Mer: 3, Gio: 4, Ven: 5, Sab: 6, Dom: 7 };
 const OFFSET_DA_LUNEDI: Record<string, number> = { Lun: 0, Mar: 1, Mer: 2, Gio: 3, Ven: 4, Sab: 5, Dom: 6 };
-const LIMITE_ESERCIZI_GIORNO = 5;
 const PAUSA_DURATA_S = 24 * 60 * 60; // 24h in secondi
 
 
@@ -58,6 +57,7 @@ const ATTIVITA_PAUSA = [
 ];
 
 function StreakCircles({ isGuest }: { isGuest?: boolean }) {
+  const { progressiSettimanali } = useUserStore();
   const GIORNI = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
   const now = new Date();
   const jsDay = now.getDay();
@@ -69,7 +69,7 @@ function StreakCircles({ isGuest }: { isGuest?: boolean }) {
 
   return (
     <div className="flex justify-between mt-4">
-      {mockProgressiSettimanali.map((g) => {
+      {progressiSettimanali.map((g) => {
         const isOggi = g.giorno === oggi;
         const isFuturo = GIORNO_INDEX[g.giorno] > oggiIndex;
         const completato = g.esercizi >= 5 && !isFuturo;
@@ -179,7 +179,7 @@ function PausaAttivaView({ secondiRimasti }: { secondiRimasti: number }) {
 
 export default function HomePage() {
   const router = useRouter();
-  const { nome, isGuest, streak, eserciziFattiOggi, pausaAttivaRichiesta, setPausaAttivaRichiesta, pausaAttivaInizio, setPausaAttivaInizio } = useUserStore();
+  const { nome, isGuest, streak, messaggi, eserciziDelGiorno, sessioniRecenti, pausaAttivaRichiesta, setPausaAttivaRichiesta, pausaAttivaInizio, setPausaAttivaInizio } = useUserStore();
   const [mostraPausa, setMostraPausa] = useState(false);
   const [secondiRimasti, setSecondiRimasti] = useState(0);
 
@@ -205,20 +205,15 @@ export default function HomePage() {
     return () => clearInterval(t);
   }, [pausaAttivaInizio, setPausaAttivaInizio]);
 
-  const jsDay = new Date().getDay();
-  const oggiIndex = jsDay === 0 ? 7 : jsDay;
-
-  const completatiOggi = mockEserciziDelGiornoList.filter((e) => e.completato).length;
-  const totaleEsercizi = mockEserciziDelGiornoList.length;
+  const completatiOggi = eserciziDelGiorno.filter((e) => e.completato).length;
+  const totaleEsercizi = eserciziDelGiorno.length || 5;
 
   // Logica medaglie streak
   const medagliaAppenaGuadagnata = mockMedaglie.find((m) => m.giorni === streak);
   const prossimaMedaglia = mockMedaglie.find((m) => m.giorni > streak);
   const giorniMancantiProssima = prossimaMedaglia ? prossimaMedaglia.giorni - streak : null;
-  const eserciziNonCompletati = mockEserciziDelGiornoList.filter(
-    (e) => !e.completato && mockEsercizi.some((m) => m.id === e.id)
-  );
-  const tuttiCompletati = completatiOggi === totaleEsercizi;
+  const eserciziNonCompletati = eserciziDelGiorno.filter((e) => !e.completato);
+  const tuttiCompletati = eserciziDelGiorno.length > 0 && completatiOggi === totaleEsercizi;
 
   function iniziaEsercizioRandom() {
     if (eserciziNonCompletati.length === 0) return;
@@ -241,7 +236,7 @@ export default function HomePage() {
                 <ChatLines width={22} height={22} strokeWidth={1.5} color={COLORS.primary} />
               </div>
             </Link>
-            {!isGuest && mockMessaggiFamiliari.some((m) => !m.letto) && (
+            {!isGuest && messaggi.some((m) => !m.letto) && (
               <span className="absolute top-0 right-0 w-3 h-3 rounded-full border-2 border-white pointer-events-none" style={{ backgroundColor: "#DC2626" }} />
             )}
           </div>
@@ -350,11 +345,11 @@ export default function HomePage() {
                 </div>
               ) : (
               <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: "#FFFFFF", boxShadow: "0px 0px 2px rgba(0,0,0,0.12)" }}>
-                {mockEserciziDelGiornoList.map((esercizio, i) => {
+                {eserciziDelGiorno.map((esercizio, i) => {
                   const cat = mockCategorie.find((c) => c.id === esercizio.categoria_id);
                   const cc = cat ? CATEGORIA_COLORS[cat.id] : null;
-                  const isFirstNonCompleted = !esercizio.completato && mockEserciziDelGiornoList.slice(0, i).every((e) => e.completato);
-                  const isLast = i === mockEserciziDelGiornoList.length - 1;
+                  const isFirstNonCompleted = !esercizio.completato && eserciziDelGiorno.slice(0, i).every((e) => e.completato);
+                  const isLast = i === eserciziDelGiorno.length - 1;
 
                   const row = (
                     <div
@@ -425,12 +420,12 @@ export default function HomePage() {
               <div className="flex flex-col gap-3">
                 {[...mockCategorie].sort((a, b) => {
                   const TREND_ORDER: Record<string, number> = { calo: 0, stabile: 1, crescita: 2 };
-                  const trendA = mockSessioniRecenti.find((s) => s.categoria === a.nome)?.trend ?? "stabile";
-                  const trendB = mockSessioniRecenti.find((s) => s.categoria === b.nome)?.trend ?? "stabile";
+                  const trendA = sessioniRecenti.find((s) => s.categoria === a.nome)?.trend ?? "stabile";
+                  const trendB = sessioniRecenti.find((s) => s.categoria === b.nome)?.trend ?? "stabile";
                   return (TREND_ORDER[trendA] ?? 1) - (TREND_ORDER[trendB] ?? 1);
                 }).map((cat) => {
                   const cc = CATEGORIA_COLORS[cat.id];
-                  const ultimaSessione = mockSessioniRecenti.find((s) => s.categoria === cat.nome);
+                  const ultimaSessione = sessioniRecenti.find((s) => s.categoria === cat.nome);
                   const trendConfig = {
                     crescita: { icon: "↑",  label: "In crescita", color: "#16A34A" },
                     stabile:  { icon: "→",  label: "Stabile",     color: COLORS.primary },
@@ -476,7 +471,7 @@ export default function HomePage() {
           nome={nome ?? ""}
           isGuest={isGuest}
           onVaiPausa={() => { setMostraPausa(false); setPausaAttivaInizio(Date.now()); }}
-          onContinua={() => { setMostraPausa(false); window.location.href = `/esercizi/${mockEsercizioDelGiorno.id}`; }}
+          onContinua={() => { setMostraPausa(false); const primo = eserciziNonCompletati[0]; if (primo) window.location.href = `/esercizi/${primo.id}`; }}
           onClose={() => setMostraPausa(false)}
         />
       )}

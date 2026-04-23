@@ -11,7 +11,7 @@ import StepLines from "@/components/ui/step-lines";
 export default function OnboardingRewardPage() {
   const router = useRouter();
   const aggiungiMedaglia = useUserStore((s) => s.aggiungiMedaglia);
-  const setUser = useUserStore((s) => s.setUser);
+  const setGuest = useUserStore((s) => s.setGuest);
   const [animato, setAnimato] = useState(false);
 
   useEffect(() => {
@@ -89,7 +89,11 @@ export default function OnboardingRewardPage() {
           Registrati e salva<br />i tuoi progressi
         </Btn>
         <button
-          onClick={() => { setUser({ isGuest: true }); router.push("/home"); }}
+          onClick={() => {
+            document.cookie = "vm_guest=1; path=/; max-age=31536000; SameSite=Lax";
+            setGuest();
+            router.push("/home");
+          }}
           className="text-sm text-center mt-2"
           style={{ color: COLORS.primary, fontWeight: 500 }}
         >
