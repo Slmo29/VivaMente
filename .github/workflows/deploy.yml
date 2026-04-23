@@ -31,8 +31,8 @@ jobs:
       - name: Deploy files to server
         uses: burnett01/rsync-deployments@7.0.1
         with:
-          switches: -az --delete --exclude='.env.local'
-          path: .next/ public/ package.json package-lock.json
+          switches: -az --delete --exclude='.env.local' --exclude='node_modules' --exclude='.git'
+          path: ./
           remote_path: ${{ secrets.APP_DIR }}
           remote_host: ${{ secrets.SERVER_HOST }}
           remote_user: ${{ secrets.SERVER_USER }}
