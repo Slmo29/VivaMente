@@ -573,6 +573,27 @@ export async function fetchDatiProgressi(userId: string): Promise<{
   };
 }
 
+// ─── Inviti familiari ─────────────────────────────────────────────────────────
+
+export async function creaInvito({
+  userId, nome, contatto, relazione,
+}: {
+  userId: string; nome: string; contatto: string; relazione: string;
+}): Promise<string> {
+  const supabase = createClient();
+  const token = Math.random().toString(36).slice(2, 10).toUpperCase() +
+                Math.random().toString(36).slice(2, 10).toUpperCase();
+  await supabase.from("inviti").insert({
+    token,
+    mittente_id: userId,
+    nome_destinatario: nome,
+    contatto,
+    relazione,
+    status: "pending",
+  });
+  return token;
+}
+
 // ─── Familiare (accesso via token, senza auth) ────────────────────────────────
 
 export interface FamiliareDashboard {

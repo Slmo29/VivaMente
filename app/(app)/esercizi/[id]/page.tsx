@@ -49,10 +49,10 @@ export default function EsercizioPage() {
   const [tempoRimanente, setTempoRimanente] = useState(DURATA_SESSIONE);
   const [tempoScaduto, setTempoScaduto] = useState(false);
   const [tempoImpiegato, setTempoImpiegato] = useState(0);
-  const [livelloPrima, setLivelloPrima] = useState(1); // TODO: leggere da user_levels
+  const [livelloPrima, setLivelloPrima] = useState(1);
   const [timerAttivo, setTimerAttivo] = useState(false);
 
-  const { userId, streak, lastActivityDate, medaglie, eserciziFattiOggi, eserciziDelGiorno, setUser, aggiungiMedaglia, setNavNascosta, marcaEsercizioDelGiornoCompletato } = useUserStore();
+  const { userId, streak, lastActivityDate, medaglie, eserciziFattiOggi, eserciziDelGiorno, userLevels, setUser, aggiungiMedaglia, setNavNascosta, marcaEsercizioDelGiornoCompletato } = useUserStore();
 
   const esercizio = mockEsercizi.find((e) => e.id === params.id);
   const categoria = mockCategorie.find((c) => c.id === esercizio?.categoria_id);
@@ -76,7 +76,9 @@ export default function EsercizioPage() {
     setTempoRimanente(DURATA_SESSIONE);
     setTempoScaduto(false);
     setTimerAttivo(false);
-    setLivelloPrima(1); // TODO: leggere da user_levels per categoria
+    if (esercizio?.categoria_id) {
+      setLivelloPrima(userLevels[esercizio.categoria_id] ?? 1);
+    }
   }, [stato]);
 
   // Timer parte solo quando onReady viene chiamato dal componente esercizio

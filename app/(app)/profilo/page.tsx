@@ -16,6 +16,7 @@ import {
   Group,
   NavArrowDown, NavArrowUp,
 } from "iconoir-react";
+import { creaInvito } from "@/lib/sync";
 
 const ORE = ["07:00","08:00","09:00","10:00","11:00","12:00","14:00","16:00","18:00","20:00","21:00"];
 const _ANNI = Array.from({ length: 61 }, (_, i) => 1990 - i); void _ANNI;
@@ -304,7 +305,7 @@ const PARENTELE = [
 
 // ─── Sezione Famiglia ─────────────────────────────────────────────────────────
 function SezioneFamiglia() {
-  const { familiari, setUser, rimuoviFamiliare, isGuest } = useUserStore();
+  const { familiari, rimuoviFamiliare, isGuest } = useUserStore();
   const [showInvita, setShowInvita] = useState(false);
   const [inviatoOk, setInviatoOk] = useState(false);
   const [draft, setDraft] = useState({ contatto: "", nome: "", parentela: "" });
@@ -315,12 +316,20 @@ function SezioneFamiglia() {
     setInviatoOk(false);
   }
 
-  function handleInvia() {
+  async function handleInvia() {
     if (!draft.contatto || !draft.nome || !draft.parentela) return;
+    const { userId } = useUserStore.getState();
+    if (!userId) return;
 
-    // TODO: sostituire con chiamata Supabase — INSERT INTO inviti_familiari + invio server-side
-    const token = Math.random().toString(36).slice(2, 10).toUpperCase();
-    const link = `https://braintrainer.app/famigliare?token=${token}`;
+    const token = await creaInvito({
+      userId,
+      nome: draft.nome,
+      contatto: draft.contatto,
+      relazione: draft.parentela,
+    });
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    const link = `${appUrl}/famigliare?token=${token}`;
     const messaggio = `Ciao ${draft.nome}! Ti invito a seguire i miei progressi su VivaMente e tenermi compagnia nel mio allenamento mentale. Unisciti qui → ${link}`;
 
     const isEmail = draft.contatto.includes("@");
@@ -333,15 +342,6 @@ function SezioneFamiglia() {
       window.open(`sms:${draft.contatto}?body=${encodeURIComponent(messaggio)}`, "_blank");
     }
 
-    const nuovoFamiliare = {
-      id: `fam-${Date.now()}`,
-      nome: draft.nome,
-      relazione: draft.parentela,
-      telefono: isEmail ? "" : draft.contatto,
-      collegato_at: new Date().toISOString(),
-      permessi: { attivita: true, medaglie: true, progressi: true },
-    };
-    setUser({ familiari: [...familiari, nuovoFamiliare] });
     setInviatoOk(true);
     setTimeout(() => { setShowInvita(false); resetModal(); }, 1800);
   }

@@ -985,7 +985,6 @@ function ProgressiPageContent() {
 
         {/* ── Tab: Storico ──────────────────────────────────────────── */}
         {tab === "storico" && (() => {
-          // TODO: sostituire con query Supabase — SELECT count(*) FROM sessioni WHERE data >= inizio_settimana / settimana_scorsa
           const diff = totaleSettimana - totaleSettimanaScorsa;
           const stato: "meglio" | "stabile" | "peggio" =
             diff > 0 ? "meglio" : diff === 0 ? "stabile" : "peggio";

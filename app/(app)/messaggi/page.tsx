@@ -8,8 +8,6 @@ import { useUserStore } from "@/lib/store";
 import { segnaMessaggioLetto } from "@/lib/sync";
 import { ArrowLeft, Check } from "iconoir-react";
 
-// TODO: da Supabase — il campo relazione viene da familiari.relazione (impostato al momento dell'invito)
-// JOIN messaggi m ON m.mittente_id = f.id LEFT JOIN familiari f ON f.utente_id = current_user_id
 const RELAZIONE_STYLE: Record<string, { bg: string; text: string }> = {
   "Figlio":            { bg: "#E8F0FE", text: "#3B5998" },
   "Figlia":            { bg: "#FCE4EC", text: "#C2185B" },
