@@ -7,7 +7,6 @@ import Btn from "@/components/ui/btn";
 import Modal from "@/components/ui/modal";
 import GraficoAttivita from "@/components/famiglia/GraficoAttivita";
 import { useUserStore } from "@/lib/store";
-import { mockMedaglie } from "@/lib/mock-data";
 import { COLORS } from "@/lib/design-tokens";
 import { AppIcon } from "@/lib/icons";
 import { Mail, CheckCircle, WarningTriangle, FireFlame, Gym, Medal, ChatBubble } from "iconoir-react";
@@ -83,9 +82,9 @@ function ModalIncoraggiamento({ open, onClose, nomeDestinatario }: {
 }
 
 export default function FamigliaDashboardPage() {
-  const { nome, streak, esercizi_completati, medaglie: medaglieIds } = useUserStore();
+  const { nome, streak, esercizi_completati, medaglie: medaglieIds, medaglieDefinizioni } = useUserStore();
   const [showIncoraggiamento, setShowIncoraggiamento] = useState(false);
-  const medaglieGuadagnate = mockMedaglie.filter((m) => medaglieIds.includes(m.id));
+  const medaglieGuadagnate = medaglieDefinizioni.filter((m) => medaglieIds.includes(m.id));
   const ultimeTre = medaglieGuadagnate.slice(-3);
   const giorniSenza = 0;
 

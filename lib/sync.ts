@@ -2,6 +2,27 @@ import { createClient } from "@/lib/supabase/client";
 
 // ─── Tipi esportati ───────────────────────────────────────────────────────────
 
+export interface MedagliaDefinizione {
+  id: string;
+  nome: string;
+  giorni: number;
+  guadagnata_at: string | null;
+}
+
+export async function fetchMedaglie(): Promise<MedagliaDefinizione[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("medaglie")
+    .select("id, nome, giorni")
+    .order("giorni", { ascending: true });
+  return (data ?? []).map((m) => ({
+    id: m.id as string,
+    nome: m.nome as string,
+    giorni: m.giorni as number,
+    guadagnata_at: null,
+  }));
+}
+
 export interface MessaggioReale {
   id: string;
   mittente: string;
@@ -124,7 +145,7 @@ export async function initUserData(userId: string) {
   const [{ data: profile }, { data: userMedaglie }, { count: eserciziFattiOggi }] =
     await Promise.all([
       supabase.from("users").select("*").eq("id", userId).single(),
-      supabase.from("user_medaglie").select("medaglia_id").eq("user_id", userId),
+      supabase.from("user_medaglie").select("medaglia_id, guadagnata_at").eq("user_id", userId),
       supabase
         .from("sessioni")
         .select("*", { count: "exact", head: true })
@@ -147,6 +168,7 @@ export async function initUserData(userId: string) {
     streak: (profile.current_streak ?? 0) as number,
     lastActivityDate: (profile.last_activity_date ?? null) as string | null,
     medaglie: (userMedaglie ?? []).map((m) => m.medaglia_id as string),
+    medaglieDate: Object.fromEntries((userMedaglie ?? []).map((m) => [m.medaglia_id as string, m.guadagnata_at as string])),
     eserciziFattiOggi: eserciziFattiOggi ?? 0,
     isGuest: false,
   };

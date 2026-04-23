@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { EserciziDelGiornoItem, ProgressoGiorno, SessioneRecente, MessaggioReale } from "@/lib/sync";
+import type { EserciziDelGiornoItem, ProgressoGiorno, SessioneRecente, MessaggioReale, MedagliaDefinizione } from "@/lib/sync";
 
 export type CanalNotifica = "whatsapp" | "sms" | "email";
 
@@ -29,6 +29,8 @@ export interface UserState {
   canale_notifica: CanalNotifica;
   consenso_notifiche: boolean;
   medaglie: string[];
+  medaglieDate: Record<string, string>;
+  medaglieDefinizioni: MedagliaDefinizione[];
   streak: number;
   lastActivityDate: string | null;
   esercizi_completati: number;
@@ -74,6 +76,8 @@ export const useUserStore = create<UserStore>((set) => ({
   canale_notifica: "whatsapp",
   consenso_notifiche: true,
   medaglie: [],
+  medaglieDate: {},
+  medaglieDefinizioni: [],
   streak: 0,
   lastActivityDate: null,
   esercizi_completati: 0,
@@ -103,6 +107,8 @@ export const useUserStore = create<UserStore>((set) => ({
     canale_notifica: "whatsapp",
     consenso_notifiche: false,
     medaglie: [],
+    medaglieDate: {},
+    medaglieDefinizioni: [],
     streak: 0,
     lastActivityDate: null,
     esercizi_completati: 0,

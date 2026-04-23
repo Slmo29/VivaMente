@@ -10,10 +10,16 @@ import {
   fetchProgressiSettimanali,
   fetchSessioniRecenti,
   fetchMessaggi,
+  fetchMedaglie,
 } from "@/lib/sync";
 
 export default function UserInit() {
   const { setUser, isGuest } = useUserStore();
+
+  useEffect(() => {
+    // Fetch medaglie definitions per tutti (dati statici pubblici)
+    fetchMedaglie().then((defs) => setUser({ medaglieDefinizioni: defs }));
+  }, [setUser]);
 
   useEffect(() => {
     if (isGuest) return;
@@ -23,7 +29,7 @@ export default function UserInit() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const [data, eserciziDelGiorno, userLevels, progressiSettimanali, sessioniRecenti, messaggi] =
+      const [data, eserciziDelGiorno, userLevels, progressiSettimanali, sessioniRecenti, messaggi, medaglieDefinizioni] =
         await Promise.all([
           initUserData(user.id),
           fetchOrCreateEserciziDelGiorno(user.id),
@@ -31,9 +37,15 @@ export default function UserInit() {
           fetchProgressiSettimanali(user.id),
           fetchSessioniRecenti(user.id),
           fetchMessaggi(user.id),
+          fetchMedaglie(),
         ]);
 
       if (data) {
+        // Merge guadagnata_at nelle definizioni
+        const medaglieConDate = medaglieDefinizioni.map((m) => ({
+          ...m,
+          guadagnata_at: data.medaglieDate?.[m.id] ?? null,
+        }));
         setUser({
           ...data,
           eserciziDelGiorno,
@@ -41,10 +53,10 @@ export default function UserInit() {
           progressiSettimanali,
           sessioniRecenti,
           messaggi,
+          medaglieDefinizioni: medaglieConDate,
           initialized: true,
         });
       } else {
-        // Nessun utente autenticato — reindirizza gestito dal middleware
         setUser({ initialized: true });
       }
     }

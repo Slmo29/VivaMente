@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import Btn from "@/components/ui/btn";
 import { useUserStore } from "@/lib/store";
-import { mockCategorie, mockMedaglie } from "@/lib/mock-data";
+import { mockCategorie } from "@/lib/mock-data";
 import { CATEGORIA_COLORS, COLORS } from "@/lib/design-tokens";
 import { AppIcon } from "@/lib/icons";
 import { Running, Phone, Palette, Leaf, Lock, ChatLines, Check } from "iconoir-react";
@@ -179,7 +179,7 @@ function PausaAttivaView({ secondiRimasti }: { secondiRimasti: number }) {
 
 export default function HomePage() {
   const router = useRouter();
-  const { nome, isGuest, streak, messaggi, eserciziDelGiorno, sessioniRecenti, pausaAttivaRichiesta, setPausaAttivaRichiesta, pausaAttivaInizio, setPausaAttivaInizio } = useUserStore();
+  const { nome, isGuest, streak, messaggi, eserciziDelGiorno, sessioniRecenti, medaglieDefinizioni, pausaAttivaRichiesta, setPausaAttivaRichiesta, pausaAttivaInizio, setPausaAttivaInizio } = useUserStore();
   const [mostraPausa, setMostraPausa] = useState(false);
   const [secondiRimasti, setSecondiRimasti] = useState(0);
 
@@ -209,8 +209,8 @@ export default function HomePage() {
   const totaleEsercizi = eserciziDelGiorno.length || 5;
 
   // Logica medaglie streak
-  const medagliaAppenaGuadagnata = mockMedaglie.find((m) => m.giorni === streak);
-  const prossimaMedaglia = mockMedaglie.find((m) => m.giorni > streak);
+  const medagliaAppenaGuadagnata = medaglieDefinizioni.find((m) => m.giorni === streak);
+  const prossimaMedaglia = medaglieDefinizioni.find((m) => m.giorni > streak);
   const giorniMancantiProssima = prossimaMedaglia ? prossimaMedaglia.giorni - streak : null;
   const eserciziNonCompletati = eserciziDelGiorno.filter((e) => !e.completato);
   const tuttiCompletati = eserciziDelGiorno.length > 0 && completatiOggi === totaleEsercizi;

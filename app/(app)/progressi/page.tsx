@@ -5,7 +5,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Card from "@/components/ui/card";
-import { mockMedaglie, mockCategorie } from "@/lib/mock-data";
+import { mockCategorie } from "@/lib/mock-data";
 import { fetchDatiProgressi, type ScoreCategoria, type StoricoGiorno } from "@/lib/sync";
 import { useUserStore } from "@/lib/store";
 import { COLORS, CATEGORIA_COLORS } from "@/lib/design-tokens";
@@ -208,8 +208,7 @@ type Periodo = "settimana" | "mese" | "anno";
 const SLICE: Record<Periodo, number> = { settimana: 7, mese: 30, anno: 365 };
 const PERIODO_LABEL: Record<Periodo, string> = { settimana: "Settimana", mese: "Mese", anno: "Anno" };
 
-// Today fixed to mock context: Apr 10, 2026 (Venerdì)
-const MOCK_TODAY = new Date(2026, 3, 10);
+const MOCK_TODAY = new Date();
 const MESI_IT_MAP: Record<string, number> = {
   "Gen":0,"Feb":1,"Mar":2,"Apr":3,"Mag":4,"Giu":5,
   "Lug":6,"Ago":7,"Set":8,"Ott":9,"Nov":10,"Dic":11,
@@ -908,7 +907,7 @@ function ProgressiPageContent() {
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const [selectedDate, setSelectedDate] = useState<string | null>(todayStr);
   const [filtroGuest, setFiltroGuest] = useState<FiltroAttivita>("tutti");
-  const { streak, isGuest, userId, eserciziDelGiorno, progressiSettimanali } = useUserStore();
+  const { streak, isGuest, userId, eserciziDelGiorno, progressiSettimanali, medaglieDefinizioni } = useUserStore();
 
   // Dati reali da Supabase
   const [scoreCategorie, setScoreCategorie] = useState<ScoreCategoria[]>([]);
@@ -942,7 +941,7 @@ function ProgressiPageContent() {
       document.documentElement.style.overflow = "";
     };
   }, [isGuest]);
-  const medaglieGuadagnate = mockMedaglie.filter((m) => streak >= m.giorni);
+  const medaglieGuadagnate = medaglieDefinizioni.filter((m) => streak >= m.giorni);
 
   return (
     <div className="flex flex-col" style={isGuest ? { overflow: "hidden", height: "100dvh" } : undefined}>
@@ -1044,7 +1043,7 @@ function ProgressiPageContent() {
             {/* Contatore */}
             <div className="flex items-center justify-between py-1">
               <p className="text-base" style={{ color: COLORS.inkMuted }}>
-                <strong className="text-ink">{medaglieGuadagnate.length}</strong> di {mockMedaglie.length} medaglie sbloccate
+                <strong className="text-ink">{medaglieGuadagnate.length}</strong> di {medaglieDefinizioni.length} medaglie sbloccate
               </p>
             </div>
 
@@ -1053,7 +1052,7 @@ function ProgressiPageContent() {
             </p>
 
             <div className="grid grid-cols-2 gap-3 pb-4">
-              {mockMedaglie.map((medaglia) => {
+              {medaglieDefinizioni.map((medaglia) => {
                 const guadagnata = streak >= medaglia.giorni;
                 const rimanenti = medaglia.giorni - streak;
 
