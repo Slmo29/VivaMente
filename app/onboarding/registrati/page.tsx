@@ -83,7 +83,7 @@ function OnboardingRegistratiContent() {
   const { setUser, setGuest, isGuest } = useUserStore();
 
   const [nome, setNome]         = useState("");
-  const [telefono, setTel]      = useState("");
+  const [telefono] = useState("");
   const [email, setEmail]       = useState("");
   const [emailToccata, setEmailToccata] = useState(false);
   const [promemoria, setPromemoria] = useState<"si" | "no" | null>(null);
@@ -100,7 +100,7 @@ function OnboardingRegistratiContent() {
   function isEmailValida(v: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 
   const formValido =
-    !!nome && !!telefono &&
+    !!nome &&
     !!email && isEmailValida(email) &&
     (!vuolePromemoria || !!orario);
 
@@ -189,11 +189,6 @@ function OnboardingRegistratiContent() {
           <div>
             <label className="text-sm font-bold text-ink-secondary block mb-2">Nome *</label>
             <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Il tuo nome" className={inputCls} />
-          </div>
-
-          <div>
-            <label className="text-sm font-bold text-ink-secondary block mb-2">Numero di telefono *</label>
-            <input type="tel" value={telefono} onChange={(e) => setTel(e.target.value.replace(/[^\d\s+\-()]/g, ""))} placeholder="+39 333 123 4567" className={inputCls} inputMode="tel" />
           </div>
 
           <div>

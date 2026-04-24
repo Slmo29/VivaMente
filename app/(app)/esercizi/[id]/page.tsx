@@ -7,34 +7,10 @@ import Link from "next/link";
 import Btn from "@/components/ui/btn";
 import { Timer, LightBulb, Star, CheckCircle } from "iconoir-react";
 import { ICON_MAP } from "@/lib/icons";
-import OddOneOut from "@/components/esercizi/OddOneOut";
-import StroopColorWord from "@/components/esercizi/StroopColorWord";
-import SequenzaTap from "@/components/esercizi/SequenzaTap";
-import RecallGrid from "@/components/esercizi/RecallGrid";
-import SortIt from "@/components/esercizi/SortIt";
-import PasatLight from "@/components/esercizi/PasatLight";
-import UpdatingWm from "@/components/esercizi/UpdatingWm";
-import MemoriaLista from "@/components/esercizi/MemoriaLista";
-import MemoriaDiProsa from "@/components/esercizi/MemoriaDiProsa";
-import Sart from "@/components/esercizi/Sart";
-import GoNoGo from "@/components/esercizi/GoNoGo";
-import Flanker from "@/components/esercizi/Flanker";
-import TaskSwitching from "@/components/esercizi/TaskSwitching";
-import DccsLight from "@/components/esercizi/DccsLight";
-import MentalRotation from "@/components/esercizi/MentalRotation";
-import FigureGround from "@/components/esercizi/FigureGround";
-import BlockDesign from "@/components/esercizi/BlockDesign";
-import Pianificazione from "@/components/esercizi/Pianificazione";
-import VerbalFluency from "@/components/esercizi/VerbalFluency";
-import Linguaggio from "@/components/esercizi/Linguaggio";
-import MemoriaProspettica from "@/components/esercizi/MemoriaProspettica";
-import DualTask from "@/components/esercizi/DualTask";
-import Vigilance from "@/components/esercizi/Vigilance";
-import Hayling from "@/components/esercizi/Hayling";
 import { mockEsercizi, mockCategorie } from "@/lib/mock-data";
 import { CATEGORIA_COLORS, COLORS } from "@/lib/design-tokens";
 import { useUserStore } from "@/lib/store";
-import { salvaSessione, aggiornaStreak, controllaNuoveMedaglie, marcaEsercizioCompletato, aggiornaUserLevel } from "@/lib/sync";
+import { salvaSessione, aggiornaStreak, controllaNuoveMedaglie, marcaEsercizioCompletato } from "@/lib/sync";
 
 const DURATA_SESSIONE = 60; // 1 minuto
 
@@ -47,18 +23,16 @@ export default function EsercizioPage() {
   const [score, setScore] = useState(0);
   const [accuratezza, setAccuratezza] = useState(0);
   const [tempoRimanente, setTempoRimanente] = useState(DURATA_SESSIONE);
-  const [tempoScaduto, setTempoScaduto] = useState(false);
+  const [_tempoScaduto, setTempoScaduto] = useState(false);
   const [tempoImpiegato, setTempoImpiegato] = useState(0);
-  const [livelloPrima, setLivelloPrima] = useState(1);
   const [timerAttivo, setTimerAttivo] = useState(false);
 
-  const { userId, streak, lastActivityDate, medaglie, eserciziFattiOggi, eserciziDelGiorno, userLevels, setUser, aggiungiMedaglia, setNavNascosta, marcaEsercizioDelGiornoCompletato } = useUserStore();
+  const { userId, streak, lastActivityDate, medaglie, eserciziFattiOggi, eserciziDelGiorno, setUser, aggiungiMedaglia, setNavNascosta, marcaEsercizioDelGiornoCompletato } = useUserStore();
 
   const esercizio = mockEsercizi.find((e) => e.id === params.id);
   const categoria = mockCategorie.find((c) => c.id === esercizio?.categoria_id);
   const cc = categoria ? CATEGORIA_COLORS[categoria.id] : null;
 
-  // Blocca scroll e nasconde navbar per tutta la durata della pagina esercizio
   useEffect(() => {
     document.body.style.overflow = "hidden";
     document.body.style.touchAction = "none";
@@ -68,20 +42,15 @@ export default function EsercizioPage() {
       document.body.style.touchAction = "";
       setNavNascosta(false);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Reset timer quando l'esercizio inizia
   useEffect(() => {
     if (stato !== "esercizio") return;
     setTempoRimanente(DURATA_SESSIONE);
     setTempoScaduto(false);
     setTimerAttivo(false);
-    if (esercizio?.categoria_id) {
-      setLivelloPrima(userLevels[esercizio.categoria_id] ?? 1);
-    }
   }, [stato]);
 
-  // Timer parte solo quando onReady viene chiamato dal componente esercizio
   useEffect(() => {
     if (stato !== "esercizio" || !timerAttivo) return;
     const interval = setInterval(() => {
@@ -97,7 +66,7 @@ export default function EsercizioPage() {
     return () => clearInterval(interval);
   }, [stato, timerAttivo]);
 
-  function handleReady() {
+  function _handleReady() {
     setTimerAttivo(true);
   }
 
@@ -126,7 +95,6 @@ export default function EsercizioPage() {
     const oggi = new Date().toISOString().split("T")[0];
     const nuoveMedaglie = await controllaNuoveMedaglie(userId, nuovoStreak, medaglie);
 
-    // Marca come completato se è un esercizio del giorno
     const isDelGiorno = eserciziDelGiorno.some((e) => e.id === esercizio.id);
     if (isDelGiorno) {
       marcaEsercizioDelGiornoCompletato(esercizio.id);
@@ -135,12 +103,6 @@ export default function EsercizioPage() {
 
     setUser({ streak: nuovoStreak, lastActivityDate: oggi, eserciziFattiOggi: eserciziFattiOggi + 1 });
     nuoveMedaglie.forEach((id) => aggiungiMedaglia(id));
-
-    // Aggiorna livello categoria
-    if (esercizio.categoria_id) {
-      const nuovoLivello = await aggiornaUserLevel(userId, esercizio.categoria_id, punteggio);
-      setUser({ userLevels: { ...useUserStore.getState().userLevels, [esercizio.categoria_id]: nuovoLivello } });
-    }
   }
 
   if (!esercizio) {
@@ -153,8 +115,6 @@ export default function EsercizioPage() {
     );
   }
 
-  const game = (esercizio.config as Record<string, unknown>)?.game as string | undefined;
-  const esCfg = esercizio.config as unknown as Record<string, string>;
   const scoreMsg = score >= 80 ? "Ottimo lavoro!" : score >= 60 ? "Buona prova!" : "Continua ad allenarti!";
 
   return (
@@ -202,7 +162,6 @@ export default function EsercizioPage() {
         {stato === "intro" && (
           <div className="flex flex-col gap-8 pt-4 pb-6">
 
-            {/* Badge + Titolo */}
             <div className="flex flex-col items-center gap-4">
               <div
                 className="px-4 py-1.5 rounded-full flex items-center gap-1.5"
@@ -221,9 +180,7 @@ export default function EsercizioPage() {
               </h1>
             </div>
 
-            {/* Info cards */}
             <div className="flex gap-4">
-              {/* Durata */}
               <div className="flex-1 bg-surface rounded-2xl p-4 flex flex-col items-center gap-3">
                 <Timer width={24} height={24} strokeWidth={1.5} color={cc?.text ?? COLORS.primary} />
                 <div className="text-center">
@@ -231,7 +188,6 @@ export default function EsercizioPage() {
                   <p className="text-base font-bold text-ink">1 minuto</p>
                 </div>
               </div>
-              {/* Difficoltà */}
               <div className="flex-1 bg-surface rounded-2xl p-4 flex flex-col items-center gap-3">
                 <div className="flex gap-1 items-center h-6">
                   {["facile","medio","difficile"].map((d) => {
@@ -253,7 +209,6 @@ export default function EsercizioPage() {
               </div>
             </div>
 
-            {/* Perché fa bene */}
             <div className="rounded-2xl p-4 flex flex-col gap-3" style={{ backgroundColor: cc?.bg ?? COLORS.surfaceAlt }}>
               <div className="flex items-center gap-3">
                 <LightBulb width={24} height={24} strokeWidth={1.5} color={cc?.text ?? COLORS.primary} />
@@ -264,243 +219,24 @@ export default function EsercizioPage() {
               </p>
             </div>
 
-            {/* CTA */}
             <Btn size="lg" onClick={() => setStato("esercizio")}>Inizia ora</Btn>
           </div>
         )}
 
         {/* ── ESERCIZIO ──────────────────────────────────────────────────── */}
         {stato === "esercizio" && (
-          <>
-            {game === "sequence_tap" && (
-              <SequenzaTap
-                stimulusType={esCfg.stimulusType as "numeri" | "parole" | "immagini"}
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "recall_grid" && (
-              <RecallGrid
-                stimulusType={esCfg.stimulusType as "numeri" | "parole"}
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "sort_it" && (
-              <SortIt
-                stimulusType={esCfg.stimulusType as "colore" | "forma" | "numero" | "texture" | "dimensione"}
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "pasat_light" && (
-              <PasatLight
-                digitType={esCfg.digitType as "single" | "double"}
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "updating_wm" && (
-              <UpdatingWm
-                stimulusType={esCfg.stimulusType as "numerici" | "parole_living" | "parole_non_living" | "parole_miste" | "misti"}
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "memoria_lista" && (
-              <MemoriaLista
-                stimulusType={esCfg.stimulusType as "parole_semantiche" | "parole_non_correlate" | "numeri" | "parole_living" | "parole_non_living" | "immagini"}
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "memoria_di_prosa" && (
-              <MemoriaDiProsa
-                textType={esCfg.textType as "narrativi" | "descrittivi" | "procedurali"}
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "sart" && (
-              <Sart
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "go_nogo" && (
-              <GoNoGo
-                stimulusType={esCfg.stimulusType as "cromatico" | "semantico" | "multimodale" | "lessicale"}
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "flanker" && (
-              <Flanker
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "task_switching" && (
-              <TaskSwitching
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "dccs_light" && (
-              <DccsLight
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "mental_rotation" && (
-              <MentalRotation
-                stimulusType={esCfg.stimulusType as "forme" | "oggetti_3d"}
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "figure_ground" && (
-              <FigureGround
-                stimulusType={esCfg.stimulusType as "forme" | "oggetti"}
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "block_design" && (
-              <BlockDesign
-                stimulusType={esCfg.stimulusType as "colori" | "bw"}
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "pianificazione" && (
-              <Pianificazione
-                variant={esCfg.variant as "tower_of_london" | "brixton"}
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "verbal_fluency" && (
-              <VerbalFluency
-                variant={esCfg.variant as "alternata" | "categoriale" | "fonemica"}
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "linguaggio" && (
-              <Linguaggio
-                variant={esCfg.variant as "naming" | "lexical_decision" | "sentence_anagram" | "semantic_relatedness" | "proverb_completion"}
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "memoria_prospettica" && (
-              <MemoriaProspettica
-                cueType={esCfg.cueType as "visivo_saliente" | "semantico" | "time_based"}
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "dual_task" && (
-              <DualTask
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "vigilance" && (
-              <Vigilance
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "hayling" && (
-              <Hayling
-                sentenceType={esCfg.sentenceType as "frasi_quotidiane" | "frasi_narrative" | "frasi_tecnico_scientifiche"}
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "odd_one_out" && (
-              <OddOneOut
-                stimulusType={esCfg.stimulusType as "numeri_lettere" | "parole" | "forme"}
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "stroop_color_word" && (
-              <StroopColorWord
-                variant="color_word"
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-            {game === "spatial_stroop" && (
-              <StroopColorWord
-                variant="spatial"
-                livello={(esercizio as Record<string, unknown>).livello as number ?? 1}
-                tempoScaduto={tempoScaduto}
-                onReady={handleReady}
-                onComplete={handleComplete}
-              />
-            )}
-          </>
+          <div className="flex flex-col items-center justify-center gap-6 py-20 px-4 text-center">
+            <span className="text-6xl">🚧</span>
+            <p className="text-xl font-bold text-ink">Esercizio in arrivo</p>
+            <p className="text-base" style={{ color: COLORS.inkMuted }}>
+              Questo esercizio è in fase di sviluppo.
+            </p>
+            <Btn variant="outline" onClick={() => handleComplete(0, 0)}>Completa (test)</Btn>
+          </div>
         )}
 
         {/* ── RISULTATO ──────────────────────────────────────────────────── */}
         {stato === "risultato" && (() => {
-          const livelloDopo = score > 80
-            ? Math.min(20, livelloPrima + 1)
-            : score < 70
-            ? Math.max(1, livelloPrima - 1)
-            : livelloPrima;
           const catColor = cc?.text ?? COLORS.primary;
           const catBg = cc?.bg ?? COLORS.primaryLight;
           const CatIcon = categoria?.icona ? ICON_MAP[categoria.icona] : null;
@@ -508,13 +244,11 @@ export default function EsercizioPage() {
           return (
             <div className="flex flex-col gap-8 pt-4 pb-6">
 
-              {/* Stella + Titolo */}
               <div className="flex flex-col items-center gap-4">
                 <Star width={48} height={48} strokeWidth={1.5} color={catColor} fill={catColor} />
                 <h1 className="text-3xl font-extrabold text-ink text-center">{scoreMsg}</h1>
               </div>
 
-              {/* Info cards: Tempo + Accuratezza */}
               <div className="flex gap-4">
                 <div className="flex-1 bg-surface rounded-2xl p-4 flex flex-col items-center gap-3">
                   <Timer width={24} height={24} strokeWidth={1.5} color={catColor} />
@@ -532,39 +266,13 @@ export default function EsercizioPage() {
                 </div>
               </div>
 
-              {/* Livello categoria */}
-              <div className="rounded-2xl p-4 flex flex-col gap-4" style={{ backgroundColor: catBg }}>
-                <div className="flex items-center gap-3">
-                  {CatIcon && <CatIcon width={24} height={24} strokeWidth={1.5} color={catColor} />}
-                  <p className="text-lg font-bold text-ink">Il tuo livello {categoria?.nome}</p>
+              {CatIcon && (
+                <div className="rounded-2xl p-4 flex items-center gap-3" style={{ backgroundColor: catBg }}>
+                  <CatIcon width={24} height={24} strokeWidth={1.5} color={catColor} />
+                  <p className="text-base font-bold text-ink">{categoria?.nome}</p>
                 </div>
+              )}
 
-                {/* Prima */}
-                <div className="flex flex-col gap-2">
-                  <div className="flex justify-between text-base">
-                    <span style={{ color: COLORS.inkMuted }}>Prima</span>
-                    <span className="font-bold" style={{ color: catColor }}>{livelloPrima}/20</span>
-                  </div>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${catColor}33` }}>
-                    <div className="h-full rounded-full transition-all duration-700"
-                      style={{ width: `${(livelloPrima / 20) * 100}%`, backgroundColor: catColor }} />
-                  </div>
-                </div>
-
-                {/* Dopo */}
-                <div className="flex flex-col gap-2">
-                  <div className="flex justify-between text-base">
-                    <span style={{ color: COLORS.inkMuted }}>Dopo</span>
-                    <span className="font-bold" style={{ color: catColor }}>{livelloDopo}/20</span>
-                  </div>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${catColor}33` }}>
-                    <div className="h-full rounded-full transition-all duration-700"
-                      style={{ width: `${(livelloDopo / 20) * 100}%`, backgroundColor: catColor }} />
-                  </div>
-                </div>
-              </div>
-
-              {/* CTA */}
               <Link href="/esercizi">
                 <Btn size="lg" className="w-full">Prossimo esercizio</Btn>
               </Link>

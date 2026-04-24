@@ -454,6 +454,10 @@ function StoricoGiornaliero({ storicoSessioni }: { storicoSessioni: StoricoGiorn
   );
 }
 
+const TUTTE_CATEGORIE = ["memoria", "attenzione", "linguaggio", "esecutive", "visuospaziali"] as const;
+const CAT_NOMI_DET: Record<string, string> = { memoria: "Memoria", attenzione: "Attenzione", linguaggio: "Linguaggio", esecutive: "Esecutive", visuospaziali: "Visuospaziali" };
+const CAT_ICONE_DET: Record<string, string> = { memoria: "brain", attenzione: "target", linguaggio: "chat", esecutive: "puzzle", visuospaziali: "eye" };
+
 function DettaglioGiorno({ dateStr, storicoSessioni, esercizioDelGiornoId }: { dateStr: string; storicoSessioni: StoricoGiorno[]; esercizioDelGiornoId: string }) {
   const sessioni = storicoSessioni.find((g) => g.data === dateStr)?.sessioni ?? [];
   const d = new Date(dateStr);
@@ -462,6 +466,10 @@ function DettaglioGiorno({ dateStr, storicoSessioni, esercizioDelGiornoId }: { d
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const isToday = dateStr === todayStr;
+
+  const sessioniPerCat = Object.fromEntries(sessioni.map((s) => [s.categoria.toLowerCase(), s]));
+  const numCompletate = Object.keys(sessioniPerCat).length;
+  const isCompleta = numCompletate >= 5;
 
   return (
     <div className="flex flex-col gap-3">
@@ -488,25 +496,46 @@ function DettaglioGiorno({ dateStr, storicoSessioni, esercizioDelGiornoId }: { d
           </div>
         )
       ) : (
-        <div className="flex flex-col">
-          {sessioni.map((s, i) => {
-            const cc = CATEGORIA_COLORS[s.categoria.toLowerCase()];
-            const catLabel = s.categoria.charAt(0).toUpperCase() + s.categoria.slice(1);
-            return (
-              <div key={i} className="flex items-center gap-3 py-3" style={{ borderTop: i > 0 ? `1px solid ${COLORS.border}` : undefined }}>
+        <div className="flex flex-col gap-3">
+          {/* Badge sessione */}
+          <div
+            className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+            style={{ backgroundColor: isCompleta ? COLORS.successLight : "#FEF3C7" }}
+          >
+            <span className="text-sm font-bold" style={{ color: isCompleta ? COLORS.success : "#D97706" }}>
+              {isCompleta ? "✓ Sessione completata" : `${numCompletate}/5 esercizi completati`}
+            </span>
+          </div>
+
+          {/* Riga per ogni categoria */}
+          <div className="flex flex-col">
+            {TUTTE_CATEGORIE.map((catId, i) => {
+              const s = sessioniPerCat[catId];
+              const cc = CATEGORIA_COLORS[catId];
+              return (
                 <div
-                  className="w-11 h-11 rounded-md flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: cc?.bg ?? COLORS.background }}
+                  key={catId}
+                  className="flex items-center gap-3 py-3"
+                  style={{ borderTop: i > 0 ? `1px solid ${COLORS.border}` : undefined }}
                 >
-                  <AppIcon name={s.icona} size={24} color={cc?.text ?? COLORS.primary} />
+                  <div
+                    className="w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: s ? (cc?.bg ?? COLORS.background) : "#F3F4F6" }}
+                  >
+                    <AppIcon name={CAT_ICONE_DET[catId]} size={22} color={s ? (cc?.text ?? COLORS.primary) : "#D1D5DB"} />
+                  </div>
+                  <p className="flex-1 text-sm font-medium" style={{ color: s ? COLORS.ink : COLORS.inkMuted }}>
+                    {CAT_NOMI_DET[catId]}
+                  </p>
+                  {s ? (
+                    <span className="text-sm font-bold" style={{ color: cc?.text ?? COLORS.primary }}>{s.score}%</span>
+                  ) : (
+                    <span className="text-xs font-medium" style={{ color: COLORS.inkMuted }}>Non svolto</span>
+                  )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-base font-normal text-ink truncate">{s.nome_esercizio}</p>
-                  <p className="text-xs mt-0.5" style={{ color: COLORS.inkMuted }}>{catLabel} · Livello {s.livello}/20</p>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
@@ -540,7 +569,7 @@ function CervelloGlobaleCard({ scoreCategorie }: { scoreCategorie: ScoreCategori
   const globalScore = scoreCategorie.length > 0
     ? Math.round(scoreCategorie.reduce((sum, c) => sum + c.score, 0) / scoreCategorie.length)
     : 0;
-  const globalSessioni = scoreCategorie.reduce((sum, c) => sum + c.sessioni, 0);
+  const globalSessioni = scoreCategorie[0]?.sessioni ?? 0;
   const globalStorico = scoreCategorie.length > 0
     ? scoreCategorie[0].storico.map((entry, i) => ({
         label: entry.label,
@@ -718,7 +747,7 @@ function AttivitaTab({ filtro: filtroExt, setFiltro: setFiltroExt, hidePills, sc
   // Stats
   const livelloMedio       = filteredCats.length > 0 ? Math.round(filteredCats.reduce((s, c) => s + c.livello, 0) / filteredCats.length) : 0;
   const dominiInCrescita   = filteredCats.filter((c) => c.trend === "crescita").length;
-  const sessioniTotali     = filteredCats.reduce((s, c) => s + c.sessioni, 0);
+  const sessioniTotali     = filteredCats[0]?.sessioni ?? 0;
 
   return (
     <div className="flex flex-col gap-4">
@@ -923,7 +952,7 @@ function ProgressiPageContent() {
     });
   }, [userId, isGuest]);
 
-  const totaleSettimana = progressiSettimanali.reduce((a, g) => a + g.esercizi, 0);
+  const totaleSettimana = progressiSettimanali.filter((g) => g.esercizi >= 5).length;
   const esercizioDelGiornoId = eserciziDelGiorno.find((e) => !e.completato)?.id ?? eserciziDelGiorno[0]?.id ?? "";
 
   useEffect(() => {
@@ -994,21 +1023,21 @@ function ProgressiPageContent() {
               color: COLORS.success,
               icon: "↑",
               label: "In crescita",
-              txt: `Questa settimana hai fatto +${diff} esercizi rispetto alla settimana scorsa.`,
+              txt: `Questa settimana hai completato +${diff} ${diff === 1 ? "sessione" : "sessioni"} rispetto alla settimana scorsa.`,
             },
             stabile: {
               bg: "#F5F5F5",
               color: "#6B7280",
               icon: "→",
               label: "Stabile",
-              txt: `Questa settimana hai fatto lo stesso numero di esercizi della settimana scorsa.`,
+              txt: `Questa settimana hai completato lo stesso numero di sessioni della settimana scorsa.`,
             },
             peggio: {
               bg: "#FEF2F2",
               color: "#DC2626",
               icon: "↓",
               label: "In calo",
-              txt: `Questa settimana hai fatto ${Math.abs(diff)} esercizi in meno rispetto alla settimana scorsa.`,
+              txt: `Questa settimana hai completato ${Math.abs(diff)} ${Math.abs(diff) === 1 ? "sessione" : "sessioni"} in meno rispetto alla settimana scorsa.`,
             },
           }[stato];
 

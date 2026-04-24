@@ -448,42 +448,6 @@ export async function segnaMessaggioLetto(messaggioId: string): Promise<void> {
     .eq("id", messaggioId);
 }
 
-export async function aggiornaUserLevel(userId: string, categoriaId: string, score: number): Promise<number> {
-  const supabase = createClient();
-
-  const { data: sessioni } = await supabase
-    .from("sessioni")
-    .select("score")
-    .eq("user_id", userId)
-    .eq("categoria_id", categoriaId)
-    .order("created_at", { ascending: false })
-    .limit(3);
-
-  const scores = [score, ...((sessioni ?? []).map((s) => s.score as number))];
-  const media = scores.reduce((a, b) => a + b, 0) / scores.length;
-
-  const { data: levelData } = await supabase
-    .from("user_levels")
-    .select("livello_corrente")
-    .eq("user_id", userId)
-    .eq("categoria_id", categoriaId)
-    .single();
-
-  const livelloCorrente = (levelData?.livello_corrente as number) ?? 1;
-  let nuovoLivello: number;
-  if (media > 80) nuovoLivello = Math.min(20, livelloCorrente + 1);
-  else if (media < 70) nuovoLivello = Math.max(1, livelloCorrente - 1);
-  else nuovoLivello = livelloCorrente;
-
-  await supabase
-    .from("user_levels")
-    .update({ livello_corrente: nuovoLivello, updated_at: new Date().toISOString() })
-    .eq("user_id", userId)
-    .eq("categoria_id", categoriaId);
-
-  return nuovoLivello;
-}
-
 // ─── Dati progressi (pagina progressi) ───────────────────────────────────────
 
 export async function fetchDatiProgressi(userId: string): Promise<{
@@ -500,7 +464,7 @@ export async function fetchDatiProgressi(userId: string): Promise<{
   const [
     { data: sessions },
     { data: levels },
-    { count: totaleSettimanaScorsa },
+    { data: sessSettScorsa },
   ] = await Promise.all([
     supabase
       .from("sessioni")
@@ -514,13 +478,35 @@ export async function fetchDatiProgressi(userId: string): Promise<{
       .eq("user_id", userId),
     supabase
       .from("sessioni")
-      .select("*", { count: "exact", head: true })
+      .select("created_at, categoria_id")
       .eq("user_id", userId)
       .gte("created_at", (() => { const d = new Date(); d.setDate(d.getDate() - 14); return d.toISOString(); })())
       .lt("created_at", (() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString(); })()),
   ]);
 
   const livelloMap = Object.fromEntries((levels ?? []).map((l) => [l.categoria_id as string, l.livello_corrente as number]));
+
+  // Calcola giorni-sessione completi (5/5 categorie in un giorno) negli ultimi 30 giorni
+  const daysCatMap: Record<string, Set<string>> = {};
+  for (const s of (sessions ?? [])) {
+    const day = new Date(s.created_at as string).toISOString().split("T")[0];
+    if (!daysCatMap[day]) daysCatMap[day] = new Set();
+    daysCatMap[day].add(s.categoria_id as string);
+  }
+  const completeDays = Object.keys(daysCatMap).filter((day) =>
+    CATEGORIE_ORDER.every((cat) => daysCatMap[day].has(cat))
+  );
+
+  // Calcola giorni-sessione completi nella settimana precedente
+  const prevDaysCatMap: Record<string, Set<string>> = {};
+  for (const s of (sessSettScorsa ?? [])) {
+    const day = new Date(s.created_at as string).toISOString().split("T")[0];
+    if (!prevDaysCatMap[day]) prevDaysCatMap[day] = new Set();
+    prevDaysCatMap[day].add(s.categoria_id as string);
+  }
+  const totaleSettimanaScorsa = Object.keys(prevDaysCatMap).filter((day) =>
+    CATEGORIE_ORDER.every((cat) => prevDaysCatMap[day].has(cat))
+  ).length;
 
   // Score categorie
   const scoreCategorie: ScoreCategoria[] = CATEGORIE_ORDER.map((cat) => {
@@ -559,7 +545,7 @@ export async function fetchDatiProgressi(userId: string): Promise<{
       score,
       trend,
       livello,
-      sessioni: catSessions.length,
+      sessioni: completeDays.length,
       descrizione: `${NOMI_CAT[cat] ?? cat} al ${score}%`,
       storico,
       storicoLivello: storico.length > 0

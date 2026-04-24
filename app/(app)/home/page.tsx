@@ -56,16 +56,24 @@ const ATTIVITA_PAUSA = [
   { label: "Riposo",     desc: "Respira profondamente e rilassati",       icon: <Leaf width={28} height={28} strokeWidth={1.5} color="#FFFFFF" /> },
 ];
 
+const GIORNI_SETTIMANA = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
+const GIORNI_ORDINATI = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
+
+function buildGuestProgressiSettimana(): import("@/lib/sync").ProgressoGiorno[] {
+  return GIORNI_ORDINATI.map((g) => ({ giorno: g, esercizi: 0, memoria: 0, attenzione: 0, linguaggio: 0, esecutive: 0, visuospaziali: 0 }));
+}
+
 function StreakCircles({ isGuest }: { isGuest?: boolean }) {
-  const { progressiSettimanali } = useUserStore();
-  const GIORNI = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
+  const { progressiSettimanali: rawProgressi } = useUserStore();
   const now = new Date();
   const jsDay = now.getDay();
-  const oggi = GIORNI[jsDay];
+  const oggi = GIORNI_SETTIMANA[jsDay];
   const oggiIndex = jsDay === 0 ? 7 : jsDay;
   const daysFromMonday = jsDay === 0 ? 6 : jsDay - 1;
   const monday = new Date(now);
   monday.setDate(now.getDate() - daysFromMonday);
+
+  const progressiSettimanali = rawProgressi.length > 0 ? rawProgressi : buildGuestProgressiSettimana();
 
   return (
     <div className="flex justify-between mt-4">
@@ -205,15 +213,27 @@ export default function HomePage() {
     return () => clearInterval(t);
   }, [pausaAttivaInizio, setPausaAttivaInizio]);
 
-  const completatiOggi = eserciziDelGiorno.filter((e) => e.completato).length;
-  const totaleEsercizi = eserciziDelGiorno.length || 5;
+  const eserciziDelGiornoEffettivi = eserciziDelGiorno.length > 0
+    ? eserciziDelGiorno
+    : mockCategorie.map((cat) => ({
+        id: cat.id,
+        titolo: cat.nome,
+        categoria_id: cat.id,
+        livello: 1,
+        durata_stimata: 60,
+        completato: false,
+        risultato: null,
+      }));
+
+  const completatiOggi = eserciziDelGiornoEffettivi.filter((e) => e.completato).length;
+  const totaleEsercizi = eserciziDelGiornoEffettivi.length || 5;
 
   // Logica medaglie streak
   const medagliaAppenaGuadagnata = medaglieDefinizioni.find((m) => m.giorni === streak);
   const prossimaMedaglia = medaglieDefinizioni.find((m) => m.giorni > streak);
   const giorniMancantiProssima = prossimaMedaglia ? prossimaMedaglia.giorni - streak : null;
-  const eserciziNonCompletati = eserciziDelGiorno.filter((e) => !e.completato);
-  const tuttiCompletati = eserciziDelGiorno.length > 0 && completatiOggi === totaleEsercizi;
+  const eserciziNonCompletati = eserciziDelGiornoEffettivi.filter((e) => !e.completato);
+  const tuttiCompletati = eserciziDelGiornoEffettivi.length > 0 && completatiOggi === totaleEsercizi;
 
   function iniziaEsercizioRandom() {
     if (eserciziNonCompletati.length === 0) return;
@@ -345,10 +365,10 @@ export default function HomePage() {
                 </div>
               ) : (
               <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: "#FFFFFF", boxShadow: "0px 0px 2px rgba(0,0,0,0.12)" }}>
-                {eserciziDelGiorno.map((esercizio, i) => {
+                {eserciziDelGiornoEffettivi.map((esercizio, i) => {
                   const cat = mockCategorie.find((c) => c.id === esercizio.categoria_id);
                   const cc = cat ? CATEGORIA_COLORS[cat.id] : null;
-                  const isFirstNonCompleted = !esercizio.completato && eserciziDelGiorno.slice(0, i).every((e) => e.completato);
+                  const isFirstNonCompleted = !esercizio.completato && eserciziDelGiornoEffettivi.slice(0, i).every((e) => e.completato);
                   const isLast = i === eserciziDelGiorno.length - 1;
 
                   const row = (

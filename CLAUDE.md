@@ -23,7 +23,7 @@ No test suite is configured.
 - `app/onboarding/` — Auth flow: `registrati`, `accedi`, `istruzioni`, `demo`, `reward`
 - `app/famiglia/` — Family/caregiver dashboard (authenticated senior-side)
 - `app/famigliare/` — Caregiver view accessed via one-time token (no auth required)
-- `app/auth/callback/` — Supabase magic link callback: exchanges code for session, creates user profile + `user_levels` rows on first login
+- `app/auth/callback/` — Supabase magic link callback: exchanges code for session, creates user profile on first login
 
 Root redirects to `/onboarding`.
 
@@ -36,17 +36,17 @@ Root redirects to `/onboarding`.
 **Supabase** handles auth + PostgreSQL. Key tables:
 - `users` — Senior user profiles; stores `current_streak INT`, `last_activity_date DATE`, `genere TEXT` (used in `/famigliare` for relationship label)
 - `categorie` — Static lookup: `id` (slug), `nome`, `icona`, `colore`. 5 records: `memoria`, `attenzione`, `linguaggio`, `esecutive`, `visuospaziali`
-- `esercizi` — Exercise definitions; `id` is a readable slug (e.g. `sequence-tap-immagini`); `famiglia TEXT` identifies the shared game engine; `config JSONB` holds engine parameters; `livello INT` 1–20
 - `sessioni` — Completed sessions: `score`, `accuratezza`, `durata`, `completato`, `categoria_id` (denormalized for analytics)
-- `esercizi_del_giorno` — Per-user daily assignment: 5 rows/day (one per category), unique on `(user_id, data, categoria_id)`; rotation uses day-of-year mod pool size
-- `user_levels` — Per-user adaptive level by category: 5 rows/user (1–20); updated after each session with logic: >80% avg on last 3 → +1, 70–80% → unchanged, <70% → −1
+- `esercizi_del_giorno` — Per-user daily assignment: 5 rows/day (one per category), unique on `(user_id, data, categoria_id)`; rotation uses day-of-year mod pool size. **Da ridisegnare con le nuove specifiche esercizi.**
 - `medaglie` — Streak-based medals with `giorni INT`; 11 records (1,2,3,7,10,14,28,50,100,200,365 days)
 - `user_medaglie` — Join table tracking earned medals
 - `familiari` — Linked caregivers with `permessi JSONB`; `collegato_at` is a timestamp (convert via `giorniDa()` in `lib/utils.ts`)
 - `inviti` — One-time tokens for caregiver onboarding (7-day expiry)
 - `messaggi` — Encouragement messages from caregiver to senior; `familiare_id` FK to `familiari`; insert policy is open (caregiver has no auth session)
 
-Row Level Security is enabled on all tables. Static tables (`categorie`, `esercizi`, `medaglie`) have public read. Caregiver actions on `messaggi` and `familiari` go through Supabase RPC functions (`get_familiare_dashboard`, `invia_messaggio_familiare`) that accept a token parameter.
+> **Tabelle in attesa di ridisegno:** `esercizi` (rimossa logicamente, da droppare e ricreare), `user_levels` (logica adattiva da ridefinire). Non usare né referenziare queste tabelle finché le nuove specifiche non sono disponibili.
+
+Row Level Security is enabled on all tables. Static tables (`categorie`, `medaglie`) have public read. Caregiver actions on `messaggi` and `familiari` go through Supabase RPC functions (`get_familiare_dashboard`, `invia_messaggio_familiare`) that accept a token parameter.
 
 Two Supabase clients:
 - `lib/supabase/client.ts` — Browser (use in Client Components)
@@ -57,21 +57,19 @@ Two Supabase clients:
 All DB interactions. Key functions:
 
 **Init / profile:**
-- `createUserProfile(...)` — upserts `users` row + seeds 5 `user_levels` rows; called from registration flow
+- `createUserProfile(...)` — upserts `users` row; called from registration flow
 - `initUserData(userId)` — fetches profile, medals, today's session count; used by `UserInit.tsx`
 
-**Sessions & progression:**
+**Sessions & streak:**
 - `salvaSessione(...)` — inserts into `sessioni`
 - `aggiornaStreak(...)` — recalculates streak (reset if gap > 1 day), updates `users`
 - `controllaNuoveMedaglie(...)` — checks newly earned medals, inserts into `user_medaglie`
-- `aggiornaUserLevel(userId, categoriaId, score)` — adaptive level update using rolling avg of last 3 sessions; returns new level
 
 **Daily exercises:**
-- `fetchOrCreateEserciziDelGiorno(userId)` — reads or creates today's 5 exercises; rotation = `(dayOfYear + categoryIndex) % poolSize`
+- `fetchOrCreateEserciziDelGiorno(userId)` — reads or creates today's 5 exercises (1 per category); rotation = `(dayOfYear + categoryIndex) % poolSize`
 - `marcaEsercizioCompletato(userId, esercizioId)` — updates `esercizi_del_giorno.completato`
 
 **Dashboard / analytics:**
-- `fetchUserLevels(userId)` — returns `Record<categoriaId, livello>`
 - `fetchProgressiSettimanali(userId)` — sessions grouped by day for current Mon–Sun week
 - `fetchSessioniRecenti(userId)` — last 6 sessions with trend (crescita/stabile/calo)
 - `fetchDatiProgressi(userId)` — full 30-day analytics for `/progressi` page: score per category, storico, totale settimana scorsa
@@ -92,7 +90,7 @@ Runtime state:
 - `streak`, `lastActivityDate`, `medaglie` (array di ID)
 - `eserciziFattiOggi` — count of today's completed sessions
 - `eserciziDelGiorno: EserciziDelGiornoItem[]` — today's 5 exercises with completion status
-- `userLevels: Record<string, number>` — current adaptive level per category
+- `userLevels: Record<string, number>` — livello adattivo per categoria; **logica di aggiornamento da ridefinire**
 - `progressiSettimanali: ProgressoGiorno[]` — weekly chart data
 - `sessioniRecenti: SessioneRecente[]` — last 6 sessions for dashboard
 - `familiari: Familiare[]`
@@ -106,26 +104,20 @@ Runtime state:
 
 ### Exercise System
 
-5 cognitive categories, each with a pool of exercise IDs (slugs matching `esercizi.id`):
-- `memoria`: sequence-tap-immagini, recall-grid-numeri, memoria-lista-parole, updating-wm-numeri, memoria-prosa-narrativi, sequence-tap-parole, memoria-lista-parole-semantiche, sequence-tap-numeri
-- `attenzione`: pasat-light-single, flanker-frecce, sart-cifre, vigilance, odd-one-out-forme, odd-one-out-numeri-lettere
-- `linguaggio`: linguaggio-semantic-relatedness, linguaggio-naming, verbal-fluency-categoriale, linguaggio-proverb-completion, linguaggio-lexical-decision
-- `esecutive`: dccs-light, sort-it-colore, task-switching-numeri, hayling-quotidiano, pianificazione-tol
-- `visuospaziali`: block-design-colori, mental-rotation-forme, figure-ground-forme, figure-ground-oggetti
+> **Stato attuale: in ridisegno.** I game engine precedenti (`components/esercizi/`) sono stati rimossi. Le nuove famiglie di esercizi e la logica adattiva sono in attesa di specifiche.
 
-Each exercise has a `famiglia` field in `esercizi` that maps to a shared game engine component. Exercise components in `components/esercizi/` use a state machine: `pronto → mostra → rispondi → fine`.
+La struttura invariata:
+- 5 categorie cognitive (`memoria`, `attenzione`, `linguaggio`, `esecutive`, `visuospaziali`)
+- Ogni giorno vengono proposti 5 esercizi, 1 per categoria (`esercizi_del_giorno`)
+- La pagina esercizio (`app/(app)/esercizi/[id]/page.tsx`) gestisce i 3 stati: `intro → esercizio → risultato`; la sezione `esercizio` è attualmente un placeholder in attesa dei nuovi componenti
 
-Implemented game engine components: `BlockDesign`, `DccsLight`, `DualTask`, `FigureGround`, `Flanker`, `GoNoGo`, `Hayling`, `Linguaggio`, `MemoriaDiProsa`, `MemoriaLista`, `MemoriaProspettica`, `MentalRotation`, `OddOneOut`, `PasatLight`, `Pianificazione`, `RecallGrid`, `Sart`, `SequenzaTap`, `SortIt`, `StroopColorWord`, `TaskSwitching`, `UpdatingWm`, `VerbalFluency`, `Vigilance` (+ legacy: `MemoriaParole`, `StroopTest`, `Anagramma`, `SequenzaColori`, `CompletaParola`, `TorreHanoi`)
-
-Adaptive difficulty: after each session `aggiornaUserLevel` updates `user_levels`; the next daily assignment picks exercises at the user's current level for that category.
-
-After 5 completed exercises, a 24-hour "active pause" is triggered via timestamp in Zustand (`pausaAttivaInizio`).
+Quando i nuovi componenti saranno implementati, il game engine riceve `livello`, `tempoScaduto`, `onReady` e `onComplete(score, accuratezza)` dalla pagina.
 
 ### UI System
 
 - Design tokens (category colors, difficulty styles) centralized in `lib/design-tokens.ts`
 - Reusable components in `components/ui/` — use `btn.tsx` variants (`primary`, `secondary`, `outline`, `ghost`, `success`, `danger`) for all buttons
-- `lib/mock-data.ts` — mock data used during development (pre-Supabase integration)
+- `lib/mock-data.ts` — mock data ancora in uso nella pagina esercizio per dati di esercizio/categoria; da sostituire con dati Supabase quando le tabelle saranno ridisegnate
 - Bottom navigation: `components/BottomNav.tsx` (4 tabs: Home, Esercizi, Progressi, Profilo); hidden when `navNascosta: true`
 
 ### Communications
