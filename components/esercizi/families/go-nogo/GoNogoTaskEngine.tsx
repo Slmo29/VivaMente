@@ -47,13 +47,13 @@ import {
 import { generaPool, type GoNogoStimolo } from "./sequence";
 import { GoNogoStimulus, type GoNogoRisposta } from "./GoNogoStimulus";
 
-// ── Demo statico per il tutorial ──────────────────────────────────────────────
-// Coppia canonical verde/rosso hard-coded indipendente dalla coppia attiva runtime.
-// Anche se la sessione usa blu/arancio, il demo usa l'esempio visivamente più chiaro.
-// Coerente con principio "tutorial parametri canonici fissi" (decisione utente Stroop).
+// ── Demo per il tutorial — usa la coppia attiva runtime ──────────────────────
+// Mostra il colore effettivo della sessione, non una coppia canonica fissa.
+// GoNogoTaskEngine passa coppiaAttivaRef.current! al momento della costruzione
+// del tutorial (dopo lazy init) — il non-null assertion è corretto.
 
-function GoNogoDemo({ tipo }: { tipo: "go" | "nogo" }) {
-  const colore = tipo === "go" ? "verde" : "rosso";
+function GoNogoDemo({ tipo, coppia }: { tipo: "go" | "nogo"; coppia: CoppiaColore }) {
+  const colore = tipo === "go" ? coppia.go : coppia.nogo;
   return (
     <div className="flex flex-col items-center gap-4">
       <div
@@ -81,6 +81,7 @@ export function GoNogoTaskEngine({
   livelloPrec,
   onReady,
   onComplete,
+  onProgress,
 }: GameEngineProps) {
 
   // ── Configurazione livello ──────────────────────────────────────────────
@@ -109,18 +110,20 @@ export function GoNogoTaskEngine({
   // Due pagine: go (cerchio verde, tappa) + nogo (cerchio rosso, non tappare).
   // Max 3 righe di testo per pagina — vincolo docs/gdd/shared/02-trial-flow.md.
 
+  const coppia = coppiaAttivaRef.current!;
+
   const tutorial: TutorialConfig | null = mostraTutorial
     ? {
         pagine: [
           {
-            titolo: "Tocca i cerchi verdi",
-            testo: "Quando vedi un cerchio verde, tocca subito il pulsante.",
-            demo: <GoNogoDemo tipo="go" />,
+            titolo: `Tocca i cerchi ${coppia.go}`,
+            testo: `Quando vedi un cerchio ${coppia.go}, tocca subito il pulsante.`,
+            demo: <GoNogoDemo tipo="go" coppia={coppia} />,
           },
           {
-            titolo: "NON toccare i cerchi rossi",
-            testo: "Quando vedi un cerchio rosso, NON toccare. Aspetta il prossimo.",
-            demo: <GoNogoDemo tipo="nogo" />,
+            titolo: `NON toccare i cerchi ${coppia.nogo}`,
+            testo: `Quando vedi un cerchio ${coppia.nogo}, NON toccare. Aspetta il prossimo.`,
+            demo: <GoNogoDemo tipo="nogo" coppia={coppia} />,
           },
         ],
       }
@@ -237,6 +240,7 @@ export function GoNogoTaskEngine({
       tempoScaduto={tempoScaduto}
       onReady={onReady}
       onComplete={onComplete}
+      onProgress={onProgress}
     />
   );
 }

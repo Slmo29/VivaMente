@@ -150,6 +150,10 @@ export interface TrialFlowProps<TStimulus, TResponse> {
    *  La pagina avvia il timer di sessione solo dopo questa callback. */
   onReady(): void;
   onComplete(risultato: SessionResult): void;
+  /** Chiamato quando un trial valutativo viene completato (fase feedback).
+   *  Modello B: total = trialValutativi (number). Modello A: total = null.
+   *  current è 1-based. Trial bonus non incrementano current. */
+  onProgress?: (current: number, total: number | null) => void;
   /** Opzionale — solo per debugging e test.
    *  Emessa ad ogni transizione della macchina a stati con uno snapshot
    *  dello stato interno. Non usare in produzione. */
@@ -384,6 +388,7 @@ export function TrialFlow<TStimulus, TResponse>({
   tempoScaduto,
   onReady,
   onComplete,
+  onProgress,
   onStateChange,
 }: TrialFlowProps<TStimulus, TResponse>) {
 
@@ -505,6 +510,16 @@ export function TrialFlow<TStimulus, TResponse>({
     [handleEvaluation],
   );
 
+  // ── Effect: onProgress init al mount (Modello B) ──────────────────────────
+  // Emette (0, total) subito al mount per rendere il badge visibile prima del
+  // primo feedback. Modello A: trialValutativi === null → noop.
+
+  useEffect(() => {
+    if (trialValutativi !== null) {
+      onProgress?.(0, trialValutativi);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Effect: TEMPO_SCADUTO prop ────────────────────────────────────────────
 
   useEffect(() => {
@@ -587,6 +602,11 @@ export function TrialFlow<TStimulus, TResponse>({
   useEffect(() => {
     if (state.phase !== "feedback") return;
 
+    // Notifica progresso a page.tsx — solo trial valutativi, i bonus non incrementano current.
+    if (!state.isBonusTrial) {
+      onProgress?.(state.trialValutativiCompletati, state.trialValutativi);
+    }
+
     // see docs/gdd/shared/02-trial-flow.md §Feedback risposta (verde/rosso 300ms)
     const duration = computeFeedbackDurationMs(
       latestProps.current.feedbackType,
@@ -598,7 +618,7 @@ export function TrialFlow<TStimulus, TResponse>({
     }, duration);
 
     return () => clearTimeout(timer);
-  }, [state.phase, state.feedbackCorretto]);
+  }, [state.phase, state.feedbackCorretto, state.isBonusTrial, state.trialValutativiCompletati, state.trialValutativi, onProgress]);
 
   // ── Effect: fase ISI ──────────────────────────────────────────────────────
 

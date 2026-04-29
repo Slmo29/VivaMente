@@ -54,6 +54,7 @@ export default function EsercizioPage() {
   const [mostraTutorial, setMostraTutorial] = useState(false);
   const [tempoScaduto, setTempoScaduto] = useState(false);
   const [tempoRimanente, setTempoRimanente] = useState(0);
+  const [progressoTrial, setProgressoTrial] = useState<{ current: number; total: number } | null>(null);
   const [scoreSessione, setScoreSessione] = useState(0);
   const [accSessione, setAccSessione] = useState(0);
   const [durataSessione, setDurataSessione] = useState(0);
@@ -139,6 +140,7 @@ export default function EsercizioPage() {
     // è un flag anti-setState-post-unmount, non anti-rigioca. Resettarlo
     // causerebbe un false negative se l'utente naviga via dopo "Gioca ancora".
     setTempoScaduto(false);
+    setProgressoTrial(null);
     onCompleteFiredRef.current = false;
     if (timerIdRef.current !== null) { clearInterval(timerIdRef.current); timerIdRef.current = null; }
   }, [stato]);
@@ -167,6 +169,11 @@ export default function EsercizioPage() {
       }
     }, 1000);
   }, [sessionDurationMs]);
+
+  const handleProgress = useCallback((current: number, total: number | null) => {
+    if (total === null) return; // Modello A: ignora
+    setProgressoTrial({ current, total });
+  }, []);
 
   // ── handleComplete ──────────────────────────────────────────────────────────
   const handleComplete = useCallback(async (risultato: SessionResult) => {
@@ -310,6 +317,12 @@ export default function EsercizioPage() {
             {formatTempo(tempoRimanente)}
           </div>
         )}
+        {(stato === "running" || stato === "time-up") && sessionDurationMs === null && progressoTrial !== null && (
+          <div className="px-3 py-1 rounded-full text-sm font-bold tabular-nums flex-shrink-0"
+            style={{ backgroundColor: COLORS.primaryLight, color: COLORS.primary }}>
+            {progressoTrial.current}/{progressoTrial.total}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 px-4 py-4 overflow-y-auto pb-6">
@@ -361,6 +374,7 @@ export default function EsercizioPage() {
             tempoScaduto={tempoScaduto}
             onReady={handleReady}
             onComplete={handleComplete}
+            onProgress={handleProgress}
           />
         )}
 

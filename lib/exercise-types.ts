@@ -80,6 +80,10 @@ export interface GameEngineProps {
   /** Il setup è completo — la pagina avvia il timer di sessione solo dopo questa callback. */
   onReady(): void;
   onComplete(risultato: SessionResult): void;
+  /** Chiamato quando un trial valutativo viene completato (fase feedback in TrialFlow).
+   *  Modello B: total = trialValutativi (number). Modello A: total = null (non usare).
+   *  current è 1-based. */
+  onProgress?: (current: number, total: number | null) => void;
 }
 
 // ── Tipi interni a TrialFlow ──────────────────────────────────────────────────
