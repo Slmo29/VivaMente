@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import type { GameEngineProps } from "@/lib/exercise-types";
 import { GoNogoTaskEngine } from "./families/go-nogo/GoNogoTaskEngine";
 import { GO_NOGO_TIMER_MS } from "./families/go-nogo/_deroghe";
+import { GoNogoSemanticoTaskEngine, GO_NOGO_SEMANTICO_TIMER_MS } from "./families/go-nogo-semantico/GoNogoSemanticoTaskEngine";
 import { FlankerTaskEngine } from "./families/flanker-task/FlankerTaskEngine";
 import { getFlankerLevel } from "./families/flanker-task/levels";
 import { StroopTaskEngine } from "./families/stroop/StroopTaskEngine";
@@ -73,6 +74,12 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
   go_nogo_cromatico: {
     Engine: GoNogoTaskEngine,
     getSessionDurationMs: () => GO_NOGO_TIMER_MS,
+  },
+
+  // ── Go/No-Go Semantico (Modello A timer 60s) ─────────────────────────────
+  go_nogo_semantico: {
+    Engine: GoNogoSemanticoTaskEngine,
+    getSessionDurationMs: () => GO_NOGO_SEMANTICO_TIMER_MS,
   },
 
   // ── Famiglia 11: SART numerico (Modello B — completamento blocchi) ─────────
