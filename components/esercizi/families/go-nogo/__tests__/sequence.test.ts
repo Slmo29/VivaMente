@@ -1,15 +1,22 @@
 import { describe, it, expect } from "vitest";
 import {
-  generaPool,
+  generaProssimoStimolo,
+  creaStreamState,
   BLOCK_SIZE,
-  NOGO_PER_BLOCK,
   GO_PER_BLOCK,
+  NOGO_PER_BLOCK,
+  type GoNogoStreamState,
   type GoNogoStimolo,
 } from "@/components/esercizi/families/go-nogo/sequence";
-import type { CoppiaColore } from "@/components/esercizi/families/go-nogo/levels";
+import {
+  GO_NOGO_LEVELS,
+  type CoppiaColore,
+  type ColoreGoNogo,
+} from "@/components/esercizi/families/go-nogo/levels";
+import { getNDistrattori } from "@/components/esercizi/families/go-nogo/_deroghe";
 
 // ── RNG deterministica (mulberry32) ───────────────────────────────────────────
-// Stessa funzione usata nel test Stroop — duplicata inline, no astrazione preventiva.
+// Stessa funzione usata nei test SART/Stroop/Odd One Out — duplicata inline.
 
 function mulberry32(seed: number): () => number {
   let s = seed >>> 0;
@@ -21,171 +28,181 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-// ── Helper ────────────────────────────────────────────────────────────────────
+// ── Helper / sentinel ─────────────────────────────────────────────────────────
 
-function countNogo(pool: GoNogoStimolo[]): number {
-  return pool.filter(s => s.tipo === "nogo").length;
-}
+const COPPIA_VR: CoppiaColore = { go: "verde", nogo: "rosso" };
 
-function maxConsecutiveNogo(pool: GoNogoStimolo[]): number {
-  let max = 0, run = 0;
-  for (const s of pool) {
-    if (s.tipo === "nogo") { run++; max = Math.max(max, run); }
-    else { run = 0; }
+function generaN(
+  n: number,
+  coppia: CoppiaColore,
+  distrattori: readonly ColoreGoNogo[],
+  seed: number,
+): GoNogoStimolo[] {
+  const state = creaStreamState();
+  const rng = mulberry32(seed);
+  const out: GoNogoStimolo[] = [];
+  for (let i = 0; i < n; i++) {
+    out.push(generaProssimoStimolo(state, coppia, distrattori, rng));
   }
-  return max;
+  return out;
 }
-
-// ── Coppia test ───────────────────────────────────────────────────────────────
-// Autonoma dal modulo levels — i test non dipendono dalla selezione palette.
-
-const COPPIA_TEST: CoppiaColore = { go: "verde", nogo: "rosso" };
 
 // ── Test suite ────────────────────────────────────────────────────────────────
 
-describe("Go/No-Go sequence — Costanti esportate", () => {
-  it("T1: BLOCK_SIZE === 10", () => {
-    expect(BLOCK_SIZE).toBe(10);
-  });
-
-  it("T2: NOGO_PER_BLOCK === 2", () => {
-    expect(NOGO_PER_BLOCK).toBe(2);
-  });
-
-  it("T3: GO_PER_BLOCK === 8 (BLOCK_SIZE - NOGO_PER_BLOCK)", () => {
-    expect(GO_PER_BLOCK).toBe(8);
-    expect(GO_PER_BLOCK).toBe(BLOCK_SIZE - NOGO_PER_BLOCK);
-  });
-});
-
-describe("Go/No-Go sequence — Conteggio e bilanciamento", () => {
-  it("T4: pool 40 (4 blocchi), tail 0 → 8 nogo esatti", () => {
-    const pool = generaPool(40, COPPIA_TEST, 0, mulberry32(1));
-    expect(countNogo(pool)).toBe(8);
-  });
-
-  it("T5: pool 100 (10 blocchi), tail 0 → 20 nogo esatti", () => {
-    const pool = generaPool(100, COPPIA_TEST, 0, mulberry32(2));
-    expect(countNogo(pool)).toBe(20);
-  });
-
-  it("T6: pool 140 (14 blocchi), tail 0 → 28 nogo esatti", () => {
-    const pool = generaPool(140, COPPIA_TEST, 0, mulberry32(3));
-    expect(countNogo(pool)).toBe(28);
-  });
-
-  it("T7: pool 40, tail 1 → 8 nogo esatti (vincolo non riduce count)", () => {
-    // Il vincolo max-1 redistribuisce, non riduce il totale nogo.
-    const pool = generaPool(40, COPPIA_TEST, 1, mulberry32(4));
-    expect(countNogo(pool)).toBe(8);
-  });
-
-  it("T8: ratio esatto 20% per tutti i pool sizes GDD", () => {
-    for (const size of [40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140]) {
-      const pool = generaPool(size, COPPIA_TEST, 0, mulberry32(size));
-      expect(countNogo(pool)).toBe(size * 0.20);
-    }
-  });
-});
-
-describe("Go/No-Go sequence — Vincolo max-1 nogo consecutivi", () => {
-  it("T9: pool 40, tail 0 → nessun nogo consecutivo", () => {
-    const pool = generaPool(40, COPPIA_TEST, 0, mulberry32(10));
-    expect(maxConsecutiveNogo(pool)).toBeLessThanOrEqual(1);
-  });
-
-  it("T10: pool 40, tail 1 → primo stimolo è go (vincolo cross-boundary)", () => {
-    const pool = generaPool(40, COPPIA_TEST, 1, mulberry32(11));
-    expect(pool[0].tipo).toBe("go");
-    expect(maxConsecutiveNogo(pool)).toBeLessThanOrEqual(1);
-  });
-
-  it("T11: pool 100 con più seed → maxConsecutiveNogo <= 1 per tutti", () => {
-    for (const seed of [100, 200, 300, 400, 500]) {
-      const pool = generaPool(100, COPPIA_TEST, 0, mulberry32(seed));
-      expect(maxConsecutiveNogo(pool)).toBeLessThanOrEqual(1);
-    }
-  });
-
-  it("T12: confine tra blocchi — ultimo nogo di un blocco non è seguito da nogo", () => {
-    // Genera pool da 20 stimoli (2 blocchi da 10) con seed che tende a mettere
-    // nogo in fondo al primo blocco, e verifica che il confine non violi il vincolo.
-    for (let seed = 0; seed < 50; seed++) {
-      const pool = generaPool(20, COPPIA_TEST, 0, mulberry32(seed));
-      // Controlla specificamente la giunzione tra blocco 1 e blocco 2 (indici 9 e 10)
-      if (pool[9].tipo === "nogo") {
-        expect(pool[10].tipo).toBe("go");
+describe("Go/No-Go — generaProssimoStimolo (cap nogo consecutivi)", () => {
+  it("T1: dopo uno stimolo nogo, il successivo è sempre go", () => {
+    for (const seed of [1, 7, 42, 123, 999]) {
+      const arr = generaN(50, COPPIA_VR, ["rosso"], seed);
+      for (let i = 0; i < arr.length - 1; i++) {
+        if (arr[i].tipo === "nogo") {
+          expect(arr[i + 1].tipo).toBe("go");
+        }
       }
-      // Invariante globale
-      expect(maxConsecutiveNogo(pool)).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("T2: 200 stimoli, mai 2 nogo consecutivi", () => {
+    const arr = generaN(200, COPPIA_VR, ["rosso"], 42);
+    for (let i = 0; i < arr.length - 1; i++) {
+      const due = arr[i].tipo === "nogo" && arr[i + 1].tipo === "nogo";
+      expect(due).toBe(false);
     }
   });
 });
 
-describe("Go/No-Go sequence — Invariante stimolo", () => {
-  it("T13: ogni stimolo go ha colore === COPPIA_TEST.go", () => {
-    const pool = generaPool(40, COPPIA_TEST, 0, mulberry32(20));
-    const goStimoli = pool.filter(s => s.tipo === "go");
-    expect(goStimoli.length).toBeGreaterThan(0);
-    for (const s of goStimoli) {
-      expect(s.colore).toBe(COPPIA_TEST.go);
+describe("Go/No-Go — generaProssimoStimolo (ratio 80/20 rolling)", () => {
+  it("T3: 10 stimoli (1 blocco) → 2 nogo + 8 go esatti", () => {
+    for (const seed of [1, 7, 42, 100]) {
+      const arr = generaN(BLOCK_SIZE, COPPIA_VR, ["rosso"], seed);
+      const nogo = arr.filter((s) => s.tipo === "nogo").length;
+      const go   = arr.filter((s) => s.tipo === "go").length;
+      expect(nogo).toBe(NOGO_PER_BLOCK);
+      expect(go).toBe(GO_PER_BLOCK);
     }
   });
 
-  it("T14: ogni stimolo nogo ha colore === COPPIA_TEST.nogo", () => {
-    const pool = generaPool(40, COPPIA_TEST, 0, mulberry32(21));
-    const nogoStimoli = pool.filter(s => s.tipo === "nogo");
-    expect(nogoStimoli.length).toBeGreaterThan(0);
-    for (const s of nogoStimoli) {
-      expect(s.colore).toBe(COPPIA_TEST.nogo);
-    }
+  it("T4: 100 blocchi (1000 stimoli) → 200 nogo + 800 go esatti", () => {
+    const arr = generaN(100 * BLOCK_SIZE, COPPIA_VR, ["rosso"], 42);
+    const nogo = arr.filter((s) => s.tipo === "nogo").length;
+    const go   = arr.filter((s) => s.tipo === "go").length;
+    expect(nogo).toBe(100 * NOGO_PER_BLOCK);
+    expect(go).toBe(100 * GO_PER_BLOCK);
   });
 
-  it("T15: nessuno stimolo ha colore estraneo alla coppia", () => {
-    const pool = generaPool(40, COPPIA_TEST, 0, mulberry32(22));
-    for (const s of pool) {
-      expect([COPPIA_TEST.go, COPPIA_TEST.nogo]).toContain(s.colore);
+  it("T5: reset block — dopo BLOCK_SIZE stimoli, contatori e indice azzerati", () => {
+    const state = creaStreamState();
+    const rng = mulberry32(11);
+    for (let i = 0; i < BLOCK_SIZE; i++) {
+      generaProssimoStimolo(state, COPPIA_VR, ["rosso"], rng);
     }
-  });
-});
-
-describe("Go/No-Go sequence — Determinismo", () => {
-  it("T16: 100 chiamate con stesso seed producono output identico", () => {
-    const baseline = generaPool(40, COPPIA_TEST, 0, mulberry32(42));
-    for (let i = 0; i < 99; i++) {
-      const pool = generaPool(40, COPPIA_TEST, 0, mulberry32(42));
-      expect(pool).toEqual(baseline);
-    }
+    expect(state.blockIndex).toBe(0);
+    expect(state.blockGoCount).toBe(0);
+    expect(state.blockNogoCount).toBe(0);
   });
 });
 
-describe("Go/No-Go sequence — Fuzz", () => {
-  it("T17: 1000 pool casuali rispettano count 20% e max-1 nogo consecutivi", () => {
-    const masterRng = mulberry32(0xC0FFEE);
-    const sizes = [40, 80, 120];
-    const tails: (0 | 1)[] = [0, 1];
+describe("Go/No-Go — generaProssimoStimolo (colore)", () => {
+  it("T6: stimoli go hanno colore = coppiaCanonical.go", () => {
+    const arr = generaN(50, COPPIA_VR, ["rosso"], 1);
+    for (const s of arr) {
+      if (s.tipo === "go") expect(s.colore).toBe(COPPIA_VR.go);
+    }
+  });
 
-    for (let i = 0; i < 1000; i++) {
-      const size = sizes[Math.floor(masterRng() * sizes.length)];
-      const tail = tails[Math.floor(masterRng() * tails.length)];
-      const seed = Math.floor(masterRng() * 0xFFFFFFFF);
-      const pool = generaPool(size, COPPIA_TEST, tail, mulberry32(seed));
+  it("T7: con distrattori=[rosso] (binario), stimoli nogo sono sempre rossi", () => {
+    const arr = generaN(50, COPPIA_VR, ["rosso"], 2);
+    for (const s of arr) {
+      if (s.tipo === "nogo") expect(s.colore).toBe("rosso");
+    }
+  });
 
-      const maxRun = maxConsecutiveNogo(pool);
-      const expectedNogo = size * 0.20;
-      const actualNogo = countNogo(pool);
-
-      if (maxRun > 1) {
-        throw new Error(
-          `Fuzz fallito: size=${size}, tail=${tail}, seed=${seed}, maxRun=${maxRun}`,
-        );
+  it("T8: con distrattori=[rosso, arancio, giallo], stimoli nogo in {rosso, arancio, giallo}", () => {
+    const distrattori: readonly ColoreGoNogo[] = ["rosso", "arancio", "giallo"];
+    const arr = generaN(100, COPPIA_VR, distrattori, 3);
+    for (const s of arr) {
+      if (s.tipo === "nogo") {
+        expect(distrattori).toContain(s.colore);
       }
-      if (actualNogo !== expectedNogo) {
-        throw new Error(
-          `Fuzz count fallito: size=${size}, tail=${tail}, seed=${seed}, ` +
-          `expected=${expectedNogo}, got=${actualNogo}`,
-        );
+    }
+  });
+
+  it("T9: copertura distrattori — ogni colore appare ≥ 5 volte su 200 stimoli", () => {
+    const distrattori: readonly ColoreGoNogo[] = ["rosso", "arancio", "giallo"];
+    const arr = generaN(200, COPPIA_VR, distrattori, 7);
+    const conteggi = new Map<ColoreGoNogo, number>();
+    for (const s of arr) {
+      if (s.tipo === "nogo") {
+        conteggi.set(s.colore, (conteggi.get(s.colore) ?? 0) + 1);
       }
+    }
+    for (const c of distrattori) {
+      expect(conteggi.get(c) ?? 0).toBeGreaterThanOrEqual(5);
+    }
+  });
+});
+
+describe("Go/No-Go — getNDistrattori", () => {
+  it("T10: lv 1, 2 → 1", () => {
+    expect(getNDistrattori(1)).toBe(1);
+    expect(getNDistrattori(2)).toBe(1);
+  });
+
+  it("T11: lv 3 → 2, lv 4 → 3, lv 5 → 4, lv 6 → 5, lv 7 → 6", () => {
+    expect(getNDistrattori(3)).toBe(2);
+    expect(getNDistrattori(4)).toBe(3);
+    expect(getNDistrattori(5)).toBe(4);
+    expect(getNDistrattori(6)).toBe(5);
+    expect(getNDistrattori(7)).toBe(6);
+  });
+
+  it("T12: lv 8–13 → 6 (cap massimo)", () => {
+    for (let lv = 8; lv <= 13; lv++) {
+      expect(getNDistrattori(lv)).toBe(6);
+    }
+  });
+});
+
+describe("Go/No-Go — creaStreamState", () => {
+  it("T13: stato iniziale corretto", () => {
+    const state = creaStreamState();
+    const expected: GoNogoStreamState = {
+      tail:                null,
+      blockGoCount:        0,
+      blockNogoCount:      0,
+      blockIndex:          0,
+      currentBlockPattern: [],
+    };
+    expect(state).toEqual(expected);
+  });
+
+  it("T14: due chiamate ritornano oggetti distinti (no shared mutation)", () => {
+    const a = creaStreamState();
+    const b = creaStreamState();
+    expect(a).not.toBe(b);
+    a.blockGoCount = 5;
+    expect(b.blockGoCount).toBe(0);
+  });
+});
+
+describe("Go/No-Go — determinismo", () => {
+  it("T15: stesso seed → stessa sequenza (50 stimoli)", () => {
+    const a = generaN(50, COPPIA_VR, ["rosso"], 123);
+    const b = generaN(50, COPPIA_VR, ["rosso"], 123);
+    expect(a).toEqual(b);
+  });
+
+  it("T16: seed diversi → sequenze diverse", () => {
+    const a = generaN(50, COPPIA_VR, ["rosso", "arancio"], 123);
+    const b = generaN(50, COPPIA_VR, ["rosso", "arancio"], 456);
+    expect(a).not.toEqual(b);
+  });
+});
+
+describe("Go/No-Go — vincoli per livello", () => {
+  it("T17: ogni livello GO_NOGO_LEVELS — coppieAmmesse[0] ha go ≠ nogo", () => {
+    for (const cfg of GO_NOGO_LEVELS) {
+      const c = cfg.coppieAmmesse[0];
+      expect(c.go).not.toBe(c.nogo);
     }
   });
 });

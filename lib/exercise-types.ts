@@ -61,6 +61,13 @@ export interface SessionResult {
 
 /** Contratto fisso per ogni game engine (da CLAUDE.md root, esteso con SessionResult). */
 export interface GameEngineProps {
+  /**
+   * Id dell'esercizio corrente (chiave del registry, corrisponde a esercizi.id
+   * nel DB). Le famiglie multi-esercizio (Odd One Out, Sequence Tap, Recall Grid,
+   * ecc.) lo leggono per discriminare la variante interna. Le famiglie a singolo
+   * esercizio (Stroop, Flanker, Go/No-Go, SART) possono ignorarlo.
+   */
+  esercizioId: string;
   livello: number;          // 1–20
   /** true quando il timer di sessione nella pagina padre è scaduto.
    *  Il game engine (o il TrialFlow interno) completa il trial in corso, poi chiama onComplete. */

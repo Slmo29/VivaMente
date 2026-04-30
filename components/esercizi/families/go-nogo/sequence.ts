@@ -1,25 +1,18 @@
 /**
- * Generazione stimoli Go/No-Go cromatico con bilanciamento go/nogo per blocchi.
+ * Generazione stimoli Go/No-Go cromatico — refactor on-demand (deroga 2026-04-30).
+ *
+ * Dopo lo switch a Modello A timer 60s (vedi `_deroghe.ts`) la generazione
+ * non è più pre-calcolata in un pool finito (`generaPool`), ma on-demand
+ * stimolo-per-stimolo via `generaProssimoStimolo(state, ...)`. Lo state
+ * mantiene cap su nogo consecutivi e ratio rolling 80/20 con BLOCK_SIZE=10.
  *
  * Ratio go/nogo: 80% go + 20% nogo. Fisso per tutti i livelli (standard clinico).
- * Fonte: docs/gdd/families/go-nogo.md §Go/No-Go ratio — "Rimane fisso per tutti i livelli".
+ * Fonte: docs/gdd/families/go-nogo.md §Go/No-Go ratio.
  *
- * GDD silente sui vincoli sequenziali oltre al ratio. Decisioni implementative:
- *
- * BLOCK_SIZE = 10: tutti i sequenceLength GDD (40,50,...,140) sono multipli di 10,
- * quindi i blocchi sono sempre interi senza chunk parziali.
- * 2 nogo + 8 go per blocco = 20% esatto.
- *
- * Vincolo "max 1 nogo consecutivo": prevenzione nogo back-to-back.
- * Clinicamente: due nogo consecutivi permettono all'utente di "aspettare" invece di
- * inibire attivamente — riduce il valore dell'esercizio. Non specificato dal GDD ma
- * adottato per robustezza del paradigma.
- *
- * Caso degenere documentato: con BLOCK_SIZE=10 + ratio 80/20 (8 go + 2 nogo per
- * blocco) il caso nGo=0 && deveEssereGo=true è impossibile per costruzione —
- * ci sono sempre 8 go di buffer disponibili. Il throw nel ramo di conflitto è
- * safety net difensivo per eventuali modifiche future del rapporto, non per
- * un caso raggiungibile con i parametri attuali.
+ * BLOCK_SIZE = 10: ogni 10 stimoli il contatore go/nogo del blocco si azzera,
+ * garantendo che la media converga al ratio prescritto. Cap "max 1 nogo
+ * consecutivo": prevenzione nogo back-to-back, clinicamente rilevante per
+ * non permettere all'utente di "aspettare" invece di inibire attivamente.
  *
  * Struttura stimolo: { tipo, colore }. Forma non inclusa — hard-coded a cerchio
  * nel renderer per lv 1–13. Lv 14–20 (congiunzione) estenderà con campo forma.
@@ -27,7 +20,7 @@
 
 import type { CoppiaColore, ColoreGoNogo } from "./levels";
 
-// ── Tipo stimolo (esportato — usato da GoNogoTaskEngine e GoNogoStimulus) ──────
+// ── Tipi (esportati — usati da GoNogoTaskEngine e GoNogoStimulus) ────────────
 
 export interface GoNogoStimolo {
   tipo:   "go" | "nogo";
@@ -36,85 +29,153 @@ export interface GoNogoStimolo {
 
 // ── Costanti (esportate per testabilità) ──────────────────────────────────────
 
-export const BLOCK_SIZE    = 10;
+export const BLOCK_SIZE     = 10;
 export const NOGO_PER_BLOCK = 2;   // 2/10 = 20%
 export const GO_PER_BLOCK   = BLOCK_SIZE - NOGO_PER_BLOCK; // 8
 
-// ── generaPool ────────────────────────────────────────────────────────────────
+// ── State stream ─────────────────────────────────────────────────────────────
 
 /**
- * Genera un pool di `poolSize` GoNogoStimolo rispettando:
- * - Ratio go/nogo 80/20, bilanciato per blocchi di BLOCK_SIZE (10) trial.
- * - Vincolo "max 1 nogo consecutivo" anche al confine tra chiamate successive,
- *   tramite `prevTailNogo`.
- *
- * @param poolSize      Numero totale di stimoli da generare. Deve essere
- *                      multiplo di BLOCK_SIZE (garantito dai sequenceLength GDD).
- * @param coppiaAttiva  Coppia go/nogo selezionata dall'engine per questa sessione.
- * @param prevTailNogo  Nogo consecutivi in fondo al pool precedente (0|1).
- *                      Passare 0 per il primo pool della sessione.
- * @param rng           Generatore di numeri casuali. Default: Math.random.
- *                      Iniettare una funzione deterministica nei test.
+ * Stato cumulativo del flusso Go/No-Go di una sessione.
+ * Mantenuto in `useRef` lato Engine, mutato in-place da
+ * `generaProssimoStimolo` per evitare allocazioni superflue su flusso lungo
+ * (60s × ~1 stimolo/secondo = ~60 stimoli per sessione, max ~70).
  */
-export function generaPool(
-  poolSize: number,
-  coppiaAttiva: CoppiaColore,
-  prevTailNogo: 0 | 1,
+export type GoNogoStreamState = {
+  /** Tipo dell'ultimo stimolo emesso (vincolo cross-block per il pattern successivo). */
+  tail: "go" | "nogo" | null;
+  /** Conteggio go nel blocco corrente. */
+  blockGoCount: number;
+  /** Conteggio nogo nel blocco corrente. */
+  blockNogoCount: number;
+  /** Indice nel blocco corrente, 0..BLOCK_SIZE-1. */
+  blockIndex: number;
+  /**
+   * Pattern del blocco corrente (lazy init al boundary). length=0 prima
+   * dell'inizializzazione del prossimo blocco. Pre-generato per garantire
+   * SIA ratio esatto (8 go + 2 nogo) SIA cap (no nogo consecutivi within
+   * block e cross-block).
+   */
+  currentBlockPattern: ("go" | "nogo")[];
+};
+
+/** Costruisce uno stato iniziale fresh. */
+export function creaStreamState(): GoNogoStreamState {
+  return {
+    tail:                null,
+    blockGoCount:        0,
+    blockNogoCount:      0,
+    blockIndex:          0,
+    currentBlockPattern: [],
+  };
+}
+
+// ── Pattern blocco (pre-generato al boundary) ────────────────────────────────
+
+/**
+ * Genera un pattern di BLOCK_SIZE posizioni con NOGO_PER_BLOCK nogo,
+ * vincolo "no nogo consecutivi" (distanza tra posizioni nogo ≥ 2).
+ *
+ * @param vincoloPrimaPosizioneGo Se true, posizione 0 NON può essere nogo
+ *                                (cross-block: il blocco precedente è
+ *                                terminato con nogo).
+ * @param rng                     RNG per scelta posizioni.
+ *
+ * Strategia: rejection sampling con max 50 tentativi (probabilità di
+ * convergenza > 99% in pochi attempts). Fallback constructive con
+ * posizioni fissate per garanzia totale.
+ */
+function generaPatternBlocco(
+  vincoloPrimaPosizioneGo: boolean,
+  rng: () => number,
+): ("go" | "nogo")[] {
+  const MAX_ATTEMPTS = 50;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const p1 = Math.floor(rng() * BLOCK_SIZE);
+    const p2 = Math.floor(rng() * BLOCK_SIZE);
+    if (p1 === p2) continue;
+    if (Math.abs(p1 - p2) < 2) continue;
+    if (vincoloPrimaPosizioneGo && (p1 === 0 || p2 === 0)) continue;
+    const pattern: ("go" | "nogo")[] = Array(BLOCK_SIZE).fill("go");
+    pattern[p1] = "nogo";
+    pattern[p2] = "nogo";
+    return pattern;
+  }
+  // Fallback constructive: posizioni fissate ben distanziate.
+  const pattern: ("go" | "nogo")[] = Array(BLOCK_SIZE).fill("go");
+  if (vincoloPrimaPosizioneGo) {
+    pattern[3] = "nogo";
+    pattern[7] = "nogo";
+  } else {
+    pattern[1] = "nogo";
+    pattern[6] = "nogo";
+  }
+  return pattern;
+}
+
+// ── generaProssimoStimolo ────────────────────────────────────────────────────
+
+/**
+ * Genera il prossimo stimolo applicando ratio 80/20 con cap su nogo
+ * consecutivi e BLOCK_SIZE rolling.
+ *
+ * Mutazione: lo `state` viene aggiornato in-place (perf su flusso lungo).
+ * Determinismo: con `rng` seedata, l'output è ripetibile.
+ *
+ * Logica di scelta tipo:
+ *   1. Se `tail === "nogo"` → forza go (cap nogo consecutivi).
+ *   2. Altrimenti, usa contatori del blocco:
+ *      - se nogoRimasti = 0 → go.
+ *      - se goRimasti = 0   → nogo.
+ *      - altrimenti probabilità nogo = nogoRimasti / (goRimasti + nogoRimasti)
+ *        (converge esattamente al target del blocco entro BLOCK_SIZE).
+ *
+ * Logica colore:
+ *   - tipo "go"   → coppiaCanonical.go (sempre).
+ *   - tipo "nogo" → random tra `distrattori` (1 colore lv 1-2, 2..6 lv 3+).
+ *
+ * @param state             State mutato in-place.
+ * @param coppiaCanonical   Coppia GDD-canonical (Go base + 1 No-Go canonical).
+ * @param distrattori       Pool colori No-Go di sessione (1..6 colori).
+ *                          Per lv 1-2 è [coppiaCanonical.nogo].
+ * @param rng               Generatore casuale [0,1). Default Math.random.
+ */
+export function generaProssimoStimolo(
+  state: GoNogoStreamState,
+  coppiaCanonical: CoppiaColore,
+  distrattori: readonly ColoreGoNogo[],
   rng: () => number = Math.random,
-): GoNogoStimolo[] {
-  const result: GoNogoStimolo[] = [];
-  let consecutiviNogo = prevTailNogo as number;
-
-  for (let blockStart = 0; blockStart < poolSize; blockStart += BLOCK_SIZE) {
-    let nNogo = NOGO_PER_BLOCK;
-    let nGo   = GO_PER_BLOCK;
-
-    for (let i = 0; i < BLOCK_SIZE; i++) {
-      // vincolo max 1 nogo consecutivo
-      const deveEssereGo   = consecutiviNogo >= 1;
-      // feasibility: se piazziamo go ora, i nogo rimasti devono stare nelle posizioni
-      // restanti senza consecutive. Invariante: nNogo <= nGo garantisce che dopo ogni go
-      // il rapporto sia ancora feasibile (nNogo <= (nGo-1)+1 = nGo).
-      const deveEssereNogo = nNogo > nGo;
-
-      let isNogo: boolean;
-
-      if (deveEssereGo && deveEssereNogo) {
-        // Stato impossibile per costruzione con BLOCK_SIZE=10 + ratio 80/20
-        // (ci sono sempre 8 go di buffer). Fail loudly per regressioni future.
-        throw new Error(
-          `[go-nogo/sequence] infeasibility irrisolvibile — stato impossibile. ` +
-          `blockStart=${blockStart}, i=${i}, nNogo=${nNogo}, nGo=${nGo}, ` +
-          `consecutiviNogo=${consecutiviNogo}`,
-        );
-      } else if (deveEssereGo) {
-        isNogo = false;
-        nGo--;
-        consecutiviNogo = 0;
-      } else if (deveEssereNogo) {
-        isNogo = true;
-        nNogo--;
-        consecutiviNogo = 1;
-      } else {
-        // Scelta probabilistica calibrata: P(nogo) = nNogo / (nGo + nNogo).
-        // Converge esattamente al target nNogo entro la fine del blocco.
-        const totale = nGo + nNogo;
-        isNogo = totale > 0 && rng() < nNogo / totale;
-        if (isNogo) {
-          nNogo--;
-          consecutiviNogo = 1;
-        } else {
-          nGo--;
-          consecutiviNogo = 0;
-        }
-      }
-
-      result.push({
-        tipo:   isNogo ? "nogo" : "go",
-        colore: isNogo ? coppiaAttiva.nogo : coppiaAttiva.go,
-      });
-    }
+): GoNogoStimolo {
+  // Lazy init pattern al boundary del blocco.
+  if (state.blockIndex === 0 || state.currentBlockPattern.length === 0) {
+    const vincolo = state.tail === "nogo";
+    state.currentBlockPattern = generaPatternBlocco(vincolo, rng);
   }
 
-  return result;
+  const tipo = state.currentBlockPattern[state.blockIndex];
+
+  // Aggiorna contatori del blocco.
+  if (tipo === "nogo") {
+    state.blockNogoCount += 1;
+  } else {
+    state.blockGoCount += 1;
+  }
+  state.tail = tipo;
+  state.blockIndex += 1;
+  if (state.blockIndex >= BLOCK_SIZE) {
+    state.blockIndex          = 0;
+    state.blockGoCount        = 0;
+    state.blockNogoCount      = 0;
+    state.currentBlockPattern = [];
+  }
+
+  // Pesca colore.
+  const colore: ColoreGoNogo =
+    tipo === "go"
+      ? coppiaCanonical.go
+      : (distrattori.length === 1
+          ? distrattori[0]
+          : distrattori[Math.floor(rng() * distrattori.length)]);
+
+  return { tipo, colore };
 }

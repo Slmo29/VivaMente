@@ -526,6 +526,21 @@ export function TrialFlow<TStimulus, TResponse>({
     if (tempoScaduto) dispatch({ type: "TEMPO_SCADUTO" });
   }, [tempoScaduto]);
 
+  // ── Effect: tempoScaduto durante presenting → forza chiusura trial ─────────
+  // Per famiglie con T.Lim trial lungo (Odd One Out lv 1-12 = 8s default
+  // tramite deroga, oppure null GDD) il trial in corso bloccherebbe la
+  // sessione fino al T.Lim. Forziamo handleEvaluation(null) per chiudere
+  // immediatamente come timeout (= trial errato, coerente con
+  // shared/02-trial-flow.md §Comportamento a timeout).
+  //
+  // Path no-op per Modello B (tempoScaduto sempre false) e per famiglie
+  // con mini-engine che gestiscono internamente tempoScaduto (Recall Grid).
+  useEffect(() => {
+    if (!tempoScaduto) return;
+    if (state.phase !== "presenting" || state.stimoloCorrente === null) return;
+    handleEvaluation(null);
+  }, [tempoScaduto, state.phase, state.stimoloCorrente, handleEvaluation]);
+
   // ── Effect: fase GENERATING ────────────────────────────────────────────────
 
   useEffect(() => {

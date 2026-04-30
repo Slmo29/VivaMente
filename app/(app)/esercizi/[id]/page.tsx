@@ -18,6 +18,22 @@ import { getFamily } from "@/components/esercizi/registry";
 import type { EventoProgressione } from "@/lib/progression";
 import type { SessionResult } from "@/lib/exercise-types";
 
+/**
+ * Deroga GDD shared/02-trial-flow.md §Schermata tutorial:
+ * il GDD prescrive tutorial automatico SOLO alla prima sessione di ogni
+ * esercizio (countSessioni === 0), poi accessibile via icona info opzionale
+ * dalla 2ª sessione in poi.
+ *
+ * Decisione UX-driven (2026-04-30): tutorial sempre visibile a ogni sessione,
+ * indipendentemente da livello e count. Motivazione: utenti senior 60+
+ * possono dimenticare le istruzioni tra una sessione e l'altra (anche
+ * dopo poche ore). L'icona info opzionale non è ancora implementata.
+ *
+ * Per tornare al GDD strict: TUTORIAL_SEMPRE_VISIBILE = false.
+ * Il fallback usa countSessioni === 0 come prescritto dal GDD.
+ */
+const TUTORIAL_SEMPRE_VISIBILE = true;
+
 type Stato = "loading" | "error" | "intro" | "running" | "time-up" | "saving" | "results";
 type ErroreTipo = "not-found" | "not-implemented" | "fetch" | null;
 
@@ -101,7 +117,7 @@ export default function EsercizioPage() {
         setEsercizio(esercizioData);
         setLivelloPrec(livelloPrecData);
         setLivelloDaGiocare(livelliDominio[esercizioData.categoria_id] ?? 1);
-        setMostraTutorial(countSessioni === 0);
+        setMostraTutorial(TUTORIAL_SEMPRE_VISIBILE || countSessioni === 0);
         setStato("intro");
       } catch {
         if (!mountedRef.current) return;
@@ -233,9 +249,10 @@ export default function EsercizioPage() {
     nuoveMedaglieCalc.forEach(id => aggiungiMedaglia(id));
     if (eserciziDelGiorno.some(e => e.id === eId)) marcaEsercizioDelGiornoCompletato(eId);
 
-    // Scenario C fix: dopo la prima sessione completata il tutorial non va più mostrato
-    // anche se l'utente clicca "Gioca ancora" senza ricaricare la pagina.
-    setMostraTutorial(false);
+    // Dopo handleComplete il prossimo "Gioca ancora" deve riproporre il
+    // tutorial se TUTORIAL_SEMPRE_VISIBILE è true. Altrimenti (GDD strict)
+    // il tutorial non va più mostrato dopo la prima sessione.
+    setMostraTutorial(TUTORIAL_SEMPRE_VISIBILE);
 
     setEventoProgr(eventoProgrCalc);
     setLivelloNuovo(livelloNuovoCalc);
@@ -320,7 +337,9 @@ export default function EsercizioPage() {
         {(stato === "running" || stato === "time-up") && sessionDurationMs === null && progressoTrial !== null && (
           <div className="px-3 py-1 rounded-full text-sm font-bold tabular-nums flex-shrink-0"
             style={{ backgroundColor: COLORS.primaryLight, color: COLORS.primary }}>
-            {progressoTrial.current}/{progressoTrial.total}
+            {progressoTrial.current === progressoTrial.total && stato === "running"
+              ? "Bonus"
+              : `${progressoTrial.current}/${progressoTrial.total}`}
           </div>
         )}
       </div>
@@ -368,6 +387,7 @@ export default function EsercizioPage() {
         {/* ── ESERCIZIO (running + time-up) ────────────────────────────────── */}
         {(stato === "running" || stato === "time-up") && Engine && (
           <Engine
+            esercizioId={esercizio!.id}
             livello={livelloCorrente}
             mostraTutorial={mostraTutorial}
             livelloPrec={livelloPrec}

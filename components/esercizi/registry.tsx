@@ -1,10 +1,27 @@
 import type { ComponentType } from "react";
 import type { GameEngineProps } from "@/lib/exercise-types";
 import { GoNogoTaskEngine } from "./families/go-nogo/GoNogoTaskEngine";
+import { GO_NOGO_TIMER_MS } from "./families/go-nogo/_deroghe";
 import { FlankerTaskEngine } from "./families/flanker-task/FlankerTaskEngine";
 import { getFlankerLevel } from "./families/flanker-task/levels";
 import { StroopTaskEngine } from "./families/stroop/StroopTaskEngine";
 import { getStroopLevel } from "./families/stroop/levels";
+import { SartTaskEngine } from "./families/sart/SartTaskEngine";
+import { OddOneOutTaskEngine } from "./families/odd-one-out/OddOneOutTaskEngine";
+import { ODD_ONE_OUT_TIMER_MS } from "./families/odd-one-out/_deroghe";
+import { MemoriaProspetticaTaskEngine } from "./families/memoria-prospettica/MemoriaProspetticaTaskEngine";
+import { RecallGridMBTTaskEngine } from "./families/recall-grid/RecallGridMBTTaskEngine";
+import { RecallGridMLTTaskEngine } from "./families/recall-grid/RecallGridMLTTaskEngine";
+import { getRecallGridMBTLevel } from "./families/recall-grid/levels";
+
+// ── Wrapper inline per Recall Grid MBT (discrimina stimulusType) ─────────────
+
+const RecallGridParoleMBTEngine = (p: GameEngineProps) => (
+  <RecallGridMBTTaskEngine {...p} stimulusType="parole" />
+);
+const RecallGridImmaginiMBTEngine = (p: GameEngineProps) => (
+  <RecallGridMBTTaskEngine {...p} stimulusType="immagini" />
+);
 
 /**
  * Entry del registry per una famiglia di esercizi.
@@ -38,9 +55,29 @@ export interface FamilyEntry {
  */
 export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
 
-  // ── Famiglia 12: Go/No-Go Cromatico (Modello B — completamento trial) ──────
+  // ── Famiglia 2: Recall Grid — 3 varianti ──────────────────────────────────
+  recall_grid_parole_mbt: {
+    Engine: RecallGridParoleMBTEngine,
+    getSessionDurationMs: (livello) => getRecallGridMBTLevel(livello).sessionDurationMs,
+  },
+  recall_grid_immagini_mbt: {
+    Engine: RecallGridImmaginiMBTEngine,
+    getSessionDurationMs: (livello) => getRecallGridMBTLevel(livello).sessionDurationMs,
+  },
+  recall_grid_immagini_mlt: {
+    Engine: RecallGridMLTTaskEngine,
+    getSessionDurationMs: () => null,  // Modello B
+  },
+
+  // ── Famiglia 12: Go/No-Go Cromatico (Modello A timer 60s — deroga UX) ─────
   go_nogo_cromatico: {
     Engine: GoNogoTaskEngine,
+    getSessionDurationMs: () => GO_NOGO_TIMER_MS,
+  },
+
+  // ── Famiglia 11: SART numerico (Modello B — completamento blocchi) ─────────
+  sart_numerico: {
+    Engine: SartTaskEngine,
     getSessionDurationMs: () => null,
   },
 
@@ -56,16 +93,31 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
     getSessionDurationMs: (livello) => getFlankerLevel(livello).sessionDurationMs,
   },
 
+  // ── Famiglia 3: Odd One Out — 2 varianti (Modello A — timer-based) ──────
+  odd_one_out_numeri_lettere: {
+    Engine: OddOneOutTaskEngine,
+    getSessionDurationMs: () => ODD_ONE_OUT_TIMER_MS,
+  },
+  odd_one_out_immagini: {
+    Engine: OddOneOutTaskEngine,
+    getSessionDurationMs: () => ODD_ONE_OUT_TIMER_MS,
+  },
+
+  // ── Famiglia 10: Memoria Prospettica — 2 varianti (Modello B — single trial) ──
+  memoria_prospettica_event_based: {
+    Engine: MemoriaProspetticaTaskEngine,
+    getSessionDurationMs: () => null,
+  },
+  memoria_prospettica_time_based: {
+    Engine: MemoriaProspetticaTaskEngine,
+    getSessionDurationMs: () => null,
+  },
+
   // ── Da aggiungere progressivamente (una entry per id JSON del catalogo) ──
   // sequence_tap_numeri_forward:           { Engine: SequenceTapEngine,           getSessionDurationMs: () => null },
   // sequence_tap_numeri_backward:          { Engine: SequenceTapEngine,           getSessionDurationMs: () => null },
   // sequence_tap_parole_forward:           { Engine: SequenceTapEngine,           getSessionDurationMs: () => null },
   // sequence_tap_parole_backward:          { Engine: SequenceTapEngine,           getSessionDurationMs: () => null },
-  // recall_grid_parole_mbt:                { Engine: RecallGridEngine,            getSessionDurationMs: () => null },
-  // recall_grid_immagini_mbt:              { Engine: RecallGridEngine,            getSessionDurationMs: () => null },
-  // recall_grid_immagini_mlt:              { Engine: RecallGridEngine,            getSessionDurationMs: () => null },
-  // odd_one_out_numeri_lettere:            { Engine: OddOneOutEngine,             getSessionDurationMs: () => null },
-  // odd_one_out_parole_miste:              { Engine: OddOneOutEngine,             getSessionDurationMs: () => null },
   // sort_it_percettivo:                    { Engine: SortItEngine,                getSessionDurationMs: () => null },
   // sort_it_semantico:                     { Engine: SortItEngine,                getSessionDurationMs: () => null },
   // hayling_ab:                            { Engine: HaylingGameEngine,           getSessionDurationMs: () => null },
@@ -82,7 +134,6 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
   // memoria_lista_immagini_rievocazione:   { Engine: MemoriaListaEngine,          getSessionDurationMs: () => null },
   // memoria_lista_parole_riconoscimento:   { Engine: MemoriaListaEngine,          getSessionDurationMs: () => null },
   // memoria_lista_immagini_riconoscimento: { Engine: MemoriaListaEngine,          getSessionDurationMs: () => null },
-  // sart_numerico:                         { Engine: SartEngine,                  getSessionDurationMs: (l) => getSartLevel(l).sessionDurationMs },
   // go_nogo_semantico:                      { Engine: GoNogoTaskEngine,            getSessionDurationMs: () => null },
   // go_nogo_semantico:                     { Engine: GoNoGoEngine,                getSessionDurationMs: (l) => getGoNoGoLevel(l).sessionDurationMs },
   // picture_naming:                        { Engine: LinguaggioDenominazioneEngine, getSessionDurationMs: () => null },
@@ -94,8 +145,6 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
   // associative_memory:                    { Engine: AssociativeMemoryEngine,     getSessionDurationMs: () => null },
   // verbal_fluency_semantica:              { Engine: VerbalFluencyEngine,         getSessionDurationMs: () => null },
   // verbal_fluency_fonemica:               { Engine: VerbalFluencyEngine,         getSessionDurationMs: () => null },
-  // memoria_prospettica_event_based:       { Engine: MemoriaProspetticaEngine,    getSessionDurationMs: () => null },
-  // memoria_prospettica_time_based:        { Engine: MemoriaProspetticaEngine,    getSessionDurationMs: () => null },
 };
 
 /**

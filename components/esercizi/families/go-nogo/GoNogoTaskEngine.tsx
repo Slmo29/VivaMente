@@ -3,38 +3,45 @@
 /**
  * GoNogoTaskEngine — game engine per la famiglia Go/No-Go Cromatico (Famiglia 12).
  *
- * Prima istanza di Modello B in produzione: sessione termina per conteggio trial
- * (trialValutativi = sequenceLength), non per timer fisso.
+ * ## Deroghe GDD (vedi `_deroghe.ts`)
  *
- * 6 differenze critiche vs StroopTaskEngine:
- *   1. Modello B: trialValutativi = config.sequenceLength (non null)
- *   2. Selezione coppia attiva runtime al mount (random tra coppieAmmesse del livello)
- *   3. valutaRisposta logica invertita: timeout su nogo = CORRETTO (inibizione riuscita)
- *   4. 5 contatori metriche (no tempo_totale_nogo_ms — nogo corretti non hanno tap)
- *   5. ISI = 0 (flusso continuo, deroga GDD shared/02-trial-flow.md)
- *   6. feedbackType = "error-only" (solo flash rosso su errore, deroga GDD)
+ * 1. **Modello A timer 60s** invece di Modello B (decisione 2026-04-30).
+ *    La sessione termina a `tempoScaduto` di pagina, non a count di stimoli.
+ *    Conseguenze:
+ *      - `trialValutativi = null`.
+ *      - Generazione on-demand stimolo-per-stimolo via `generaProssimoStimolo`.
+ *      - `getSessionDurationMs` di registry ritorna `GO_NOGO_TIMER_MS`.
+ * 2. **N distrattori (No-Go) scalato** da lv 3+ (1→6 colori) invece di sempre
+ *    1 vs 1. La coppia GDD-canonical resta usata per Go base (sempre lv 1+)
+ *    e per il singolo distrattore lv 1–2.
+ * 3. **ISI progressivo** (deroga 2026-04-30): da 400ms (lv 1) a 100ms (lv 12+).
+ *    GDD prescrive 0 (flusso continuo). Curva senior-friendly ai livelli bassi.
+ * 4. **Feedback "standard"** (deroga 2026-04-30): GDD prescrive "error-only",
+ *    deroga per dare conferma positiva sui corretti.
  *
- * TODO clinico bonus condition:
- *   TrialFlow approssima "ge90pct_go_correct AND ge90pct_nogo_correct" (GDD)
- *   con "3 consecutivi corretti" standard. Approssimazione consapevole.
+ * ## Comportamento invariato vs precedente versione
  *
- * TODO esclusione coppia ultima usata:
- *   Per first-pass la selezione è random pura tra le 2 coppie ammesse.
- *   L'esclusione della coppia dell'ultima sessione richiede query DB (pattern SART).
- *   Da implementare quando arriverà il refactor SART.
+ *   - 5 contatori metriche (no `tempo_totale_nogo_ms` — i nogo corretti non hanno tap).
+ *   - `valutaRisposta` invertita: timeout su nogo = corretto (inibizione riuscita).
+ *   - feedbackType = "error-only".
+ *   - Override accuratezza clinica via `onCompleteWrapped` (pattern SART via b).
  *
- * TODO lv 14–20:
- *   Congiunzione (colore + forma), estensione GoNogoStimolo con campo forma,
- *   warning cambio meccanica al lv 14 (getGoNogoMechanicWarning).
+ * Tutorial differenziato per N distrattori:
+ *   - lv 1–2 (n=1): testo binario classico ("NON toccare i cerchi {nogo}").
+ *   - lv 3+ (n≥2):  testo multi-distrattore ("Tocca SOLO i cerchi {go},
+ *                   ignora tutti gli altri colori").
  *
- * Riferimento: docs/gdd/families/go-nogo.md
+ * Riferimenti:
+ *   docs/gdd/families/go-nogo.md
+ *   ./_deroghe.ts
  */
 
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useMemo } from "react";
 import type {
   GameEngineProps,
   TutorialConfig,
   MicroProgressioneConfig,
+  SessionResult,
 } from "@/lib/exercise-types";
 import { TrialFlow } from "@/components/esercizi/shared/TrialFlow";
 import {
@@ -43,14 +50,49 @@ import {
   MICRO_PROGRESSIONE_GO_NOGO,
   COLORE_CSS_GO_NOGO,
   type CoppiaColore,
+  type ColoreGoNogo,
 } from "./levels";
-import { generaPool, type GoNogoStimolo } from "./sequence";
+import {
+  creaStreamState,
+  generaProssimoStimolo,
+  type GoNogoStreamState,
+  type GoNogoStimolo,
+} from "./sequence";
 import { GoNogoStimulus, type GoNogoRisposta } from "./GoNogoStimulus";
+import { getNDistrattori, getIsiMs, GO_NOGO_FEEDBACK_TYPE } from "./_deroghe";
+
+// ── Tutti i colori disponibili ───────────────────────────────────────────────
+
+const TUTTI_COLORI: readonly ColoreGoNogo[] = [
+  "verde", "rosso", "blu", "arancio",
+  "giallo", "viola", "turchese", "azzurro",
+];
+
+// ── Helper inline ────────────────────────────────────────────────────────────
+
+/** Pesca `n` elementi univoci dal pool via Fisher-Yates partial. */
+function pescaN<T>(pool: readonly T[], n: number, rng: () => number): T[] {
+  const arr = [...pool];
+  const result: T[] = [];
+  for (let i = 0; i < n && i < arr.length; i++) {
+    const j = i + Math.floor(rng() * (arr.length - i));
+    const tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+    result.push(arr[i]);
+  }
+  return result;
+}
+
+/** Sceglie una coppia canonical random tra le ammesse del livello. */
+function scegliCoppiaCanonical(
+  coppie: readonly CoppiaColore[],
+  rng: () => number,
+): CoppiaColore {
+  return coppie[Math.floor(rng() * coppie.length)];
+}
 
 // ── Demo per il tutorial — usa la coppia attiva runtime ──────────────────────
-// Mostra il colore effettivo della sessione, non una coppia canonica fissa.
-// GoNogoTaskEngine passa coppiaAttivaRef.current! al momento della costruzione
-// del tutorial (dopo lazy init) — il non-null assertion è corretto.
 
 function GoNogoDemo({ tipo, coppia }: { tipo: "go" | "nogo"; coppia: CoppiaColore }) {
   const colore = tipo === "go" ? coppia.go : coppia.nogo;
@@ -87,30 +129,53 @@ export function GoNogoTaskEngine({
   // ── Configurazione livello ──────────────────────────────────────────────
 
   const config = getGoNogoLevel(livello);
+  const nDistrattori = getNDistrattori(livello);
 
-  const microProgressione: MicroProgressioneConfig = {
-    valoreBase: config.tLimMs,
-    ...MICRO_PROGRESSIONE_GO_NOGO,
-  };
+  const microProgressione: MicroProgressioneConfig = useMemo(
+    () => ({
+      valoreBase: config.tLimMs,
+      ...MICRO_PROGRESSIONE_GO_NOGO,
+    }),
+    [config.tLimMs],
+  );
 
-  // ── Selezione coppia attiva al mount ────────────────────────────────────
-  // Lazy init via useRef: la coppia viene scelta una volta per mount e resta
-  // stabile per tutta la sessione. "Gioca ancora" rimonta il componente →
-  // nuova selezione random tra le coppieAmmesse del livello.
-  // TODO esclusione ultima coppia usata: richiede query DB (pattern SART).
+  // ── RNG sessione ────────────────────────────────────────────────────────
+  const rngRef = useRef<() => number>(Math.random);
+
+  // ── Setup coppia attiva + pool distrattori (lazy init al mount) ──────────
 
   const coppiaAttivaRef = useRef<CoppiaColore | null>(null);
+  const distrattoriRef  = useRef<readonly ColoreGoNogo[] | null>(null);
 
   if (coppiaAttivaRef.current === null) {
-    const coppie = config.coppieAmmesse;
-    coppiaAttivaRef.current = coppie[Math.floor(Math.random() * coppie.length)];
+    const coppia = scegliCoppiaCanonical(config.coppieAmmesse, rngRef.current);
+    coppiaAttivaRef.current = coppia;
+
+    if (nDistrattori === 1) {
+      distrattoriRef.current = [coppia.nogo];
+    } else {
+      const candidati = TUTTI_COLORI.filter((c) => c !== coppia.go);
+      distrattoriRef.current = pescaN(candidati, nDistrattori, rngRef.current);
+    }
   }
 
+  // ── Stato stream cumulativo (cap + ratio rolling) ────────────────────────
+  const streamStateRef = useRef<GoNogoStreamState>(creaStreamState());
+
   // ── Tutorial (prima sessione) ───────────────────────────────────────────
-  // Due pagine: go (cerchio verde, tappa) + nogo (cerchio rosso, non tappare).
-  // Max 3 righe di testo per pagina — vincolo docs/gdd/shared/02-trial-flow.md.
+  // Pagina nogo differenziata in base a nDistrattori:
+  //   n=1 (lv 1-2): testo binario classico (nogo specifico per coppia).
+  //   n≥2 (lv 3+): testo multi-distrattore ("ignora altri colori").
 
   const coppia = coppiaAttivaRef.current!;
+
+  const paginaNogoTitolo = nDistrattori === 1
+    ? `NON toccare i cerchi ${coppia.nogo}`
+    : `NON toccare i cerchi di altri colori`;
+
+  const paginaNogoTesto = nDistrattori === 1
+    ? `Quando vedi un cerchio ${coppia.nogo}, NON toccare. Aspetta il prossimo.`
+    : `Da questo livello compaiono cerchi di colori diversi. Tocca SOLO i cerchi ${coppia.go}, ignora tutti gli altri colori.`;
 
   const tutorial: TutorialConfig | null = mostraTutorial
     ? {
@@ -121,8 +186,8 @@ export function GoNogoTaskEngine({
             demo: <GoNogoDemo tipo="go" coppia={coppia} />,
           },
           {
-            titolo: `NON toccare i cerchi ${coppia.nogo}`,
-            testo: `Quando vedi un cerchio ${coppia.nogo}, NON toccare. Aspetta il prossimo.`,
+            titolo: paginaNogoTitolo,
+            testo: paginaNogoTesto,
             demo: <GoNogoDemo tipo="nogo" coppia={coppia} />,
           },
         ],
@@ -130,44 +195,21 @@ export function GoNogoTaskEngine({
     : null;
 
   // ── Warning cambio meccanica ────────────────────────────────────────────
-  // Ritorna sempre null per lv 1–13 first-pass (TODO lv 14–20).
 
   const warning = getGoNogoMechanicWarning(livelloPrec, livello);
 
-  // ── Pool di stimoli ─────────────────────────────────────────────────────
+  // ── generaStimolo (on-demand via state cumulativo) ──────────────────────
 
-  const poolRef = useRef<GoNogoStimolo[]>([]);
-  const tailRef = useRef<0 | 1>(0); // solo 0|1 — max 1 nogo consecutivo
-
-  // ── generaStimolo ───────────────────────────────────────────────────────
-
-  const generaStimolo = useCallback(
-    (_ctx: { valoreCorrente: number; isBonus: boolean }): GoNogoStimolo => {
-      if (poolRef.current.length === 0) {
-        // Modello B: pool = sequenceLength esatto del livello (già multiplo di BLOCK_SIZE).
-        // Niente buffer +3 come Modello A — TrialFlow termina dopo trialValutativi raggiunti.
-        // Refill (safety, non dovrebbe accadere): stessa size per mantenere ratio.
-        poolRef.current = generaPool(
-          config.sequenceLength,
-          coppiaAttivaRef.current!,
-          tailRef.current,
-        );
-      }
-
-      const s = poolRef.current.shift()!;
-
-      // Aggiorna tail tracker. All'esaurimento riflette il tipo dell'ultimo trial estratto,
-      // valido per il prossimo refill cross-boundary.
-      tailRef.current = (s.tipo === "nogo" ? 1 : 0) as 0 | 1;
-
-      return s;
-    },
-    [config],
-  );
+  const generaStimolo = useCallback((): GoNogoStimolo => {
+    return generaProssimoStimolo(
+      streamStateRef.current,
+      coppiaAttivaRef.current!,
+      distrattoriRef.current!,
+      rngRef.current,
+    );
+  }, []);
 
   // ── renderGoNogoStimolo ─────────────────────────────────────────────────
-  // GoNogoStimulus non riceve prop config-dependent (a differenza di Stroop
-  // che passa coloriAttivi e nOptions) → deps [].
 
   const renderGoNogoStimolo = useCallback(
     (props: { stimolo: GoNogoStimolo; onRisposta: (r: GoNogoRisposta) => void }) => (
@@ -180,25 +222,18 @@ export function GoNogoTaskEngine({
   );
 
   // ── valutaRisposta ──────────────────────────────────────────────────────
-  // Logica invertita vs Stroop/Flanker: il timeout su nogo è CORRETTO
-  // (inibizione motoria riuscita), non errore. Differenza paradigmatica
-  // fondamentale del Go/No-Go.
 
   const valutaRisposta = useCallback(
     (stimolo: GoNogoStimolo, risposta: GoNogoRisposta | null): boolean => {
       if (risposta === null) {
-        // Timeout: corretto se nogo (inibizione corretta), errore se go (omissione)
         return stimolo.tipo === "nogo";
       }
-      // Tap: corretto se go (hit), errore se nogo (commission/false alarm)
       return stimolo.tipo === "go";
     },
     [],
   );
 
   // ── aggiornaMetriche ────────────────────────────────────────────────────
-  // 5 contatori (non 6 come Flanker/Stroop): asimmetria intrinseca al paradigma.
-  // I nogo corretti non hanno tap → nessun RT da registrare → no tempo_totale_nogo_ms.
 
   const aggiornaMetriche = useCallback(
     (
@@ -214,7 +249,6 @@ export function GoNogoTaskEngine({
         nogo_totali:        (prev.nogo_totali ?? 0) + (!isGo ? 1 : 0),
         go_errori:          (prev.go_errori   ?? 0) + (isGo  && !corretto ? 1 : 0),
         nogo_errori:        (prev.nogo_errori ?? 0) + (!isGo && !corretto ? 1 : 0),
-        // RT solo su go corretti — i nogo corretti non hanno tap quindi niente RT.
         tempo_totale_go_ms: (prev.tempo_totale_go_ms ?? 0) +
           (isGo && corretto && risposta !== null ? risposta.tempoMs : 0),
       };
@@ -222,12 +256,30 @@ export function GoNogoTaskEngine({
     [],
   );
 
+  // ── onCompleteWrapped — override accuratezza clinica (SART via b) ─────────
+
+  const onCompleteWrapped = useCallback(
+    (risultato: SessionResult) => {
+      const m = risultato.metriche;
+      const totali = (m.go_totali ?? 0) + (m.nogo_totali ?? 0);
+      const errori = (m.go_errori ?? 0) + (m.nogo_errori ?? 0);
+      const accuratezzaClinica = totali > 0 ? (totali - errori) / totali : 0;
+
+      onComplete({
+        ...risultato,
+        accuratezzaValutativa: accuratezzaClinica,
+        scoreGrezzo:           Math.round(accuratezzaClinica * 100),
+      });
+    },
+    [onComplete],
+  );
+
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
     <TrialFlow<GoNogoStimolo, GoNogoRisposta>
       tLimMs={config.tLimMs}
-      trialValutativi={config.sequenceLength}
+      trialValutativi={null}
       microProgressione={microProgressione}
       generaStimolo={generaStimolo}
       renderStimolo={renderGoNogoStimolo}
@@ -235,11 +287,11 @@ export function GoNogoTaskEngine({
       tutorial={tutorial}
       warning={warning}
       aggiornaMetriche={aggiornaMetriche}
-      feedbackType="error-only"
-      isiMs={0}
+      feedbackType={GO_NOGO_FEEDBACK_TYPE}
+      isiMs={getIsiMs(livello)}
       tempoScaduto={tempoScaduto}
       onReady={onReady}
-      onComplete={onComplete}
+      onComplete={onCompleteWrapped}
       onProgress={onProgress}
     />
   );
