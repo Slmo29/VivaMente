@@ -36,6 +36,11 @@ yarn-error.log*
 .env.*
 !.env.example
 
+# DB dumps — non versionare mai backup con dati
+db_backup*.sql
+*.dump
+*.pgdump
+
 # vercel
 .vercel
 
