@@ -35,6 +35,7 @@ import { MemoriaComprensioneTestoTaskEngine } from "./families/memoria-comprensi
 import { PathTracingTaskEngine } from "./families/path-tracing/PathTracingTaskEngine";
 import { HaylingTaskEngine } from "./families/hayling-game/HaylingTaskEngine";
 import { SESSION_TIMER_MS as HAYLING_TIMER_MS } from "./families/hayling-game/levels";
+import { VerbalFluencyTaskEngine } from "./families/verbal-fluency/VerbalFluencyTaskEngine";
 
 // ── Wrapper inline per Recall Grid MBT (discrimina stimulusType) ─────────────
 
@@ -210,6 +211,16 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
   },
   memoria_comprensione_inferenziale_mbt: {
     Engine: MemoriaComprensioneTestoTaskEngine,
+    getSessionDurationMs: () => null,
+  },
+
+  // ── Famiglia 19: Verbal Fluency — 2 varianti (Modello B — 1 trial con timer interno) ─
+  verbal_fluency_semantica: {
+    Engine: VerbalFluencyTaskEngine,
+    getSessionDurationMs: () => null,
+  },
+  verbal_fluency_fonemica: {
+    Engine: VerbalFluencyTaskEngine,
     getSessionDurationMs: () => null,
   },
 
