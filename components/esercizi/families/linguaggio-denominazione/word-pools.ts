@@ -1,0 +1,255 @@
+/**
+ * components/esercizi/families/linguaggio-denominazione/word-pools.ts
+ *
+ * Pool stimoli per Picture Naming e Synonym/Antonym Decision.
+ *
+ * Picture Naming:
+ *   POOL_FO    — band "FO"    (lv 1-5): oggetti/animali ad alta frequenza
+ *   POOL_FO_AU — band "FO+AU" (lv 6-10): oggetti casa, cibo, natura, media frequenza
+ *
+ * Synonym/Antonym:
+ *   POOL_SA_BASSA — difficoltà "bassa" (lv 1-4)
+ *   POOL_SA_MEDIA — difficoltà "media" (lv 5-10)
+ */
+
+// ── Picture Naming ─────────────────────────────────────────────────────────────
+
+export interface PNItem {
+  id: string;
+  emoji: string;
+  risposteAccettate: string[];
+}
+
+export const POOL_FO: readonly PNItem[] = [
+  { id: "cane",         emoji: "🐕", risposteAccettate: ["cane", "cagnolino"] },
+  { id: "gatto",        emoji: "🐱", risposteAccettate: ["gatto", "gattino", "micio"] },
+  { id: "pesce",        emoji: "🐟", risposteAccettate: ["pesce"] },
+  { id: "uccello",      emoji: "🐦", risposteAccettate: ["uccello", "uccellino"] },
+  { id: "mucca",        emoji: "🐄", risposteAccettate: ["mucca", "vacca"] },
+  { id: "cavallo",      emoji: "🐎", risposteAccettate: ["cavallo"] },
+  { id: "pecora",       emoji: "🐑", risposteAccettate: ["pecora"] },
+  { id: "maiale",       emoji: "🐖", risposteAccettate: ["maiale", "porco"] },
+  { id: "farfalla",     emoji: "🦋", risposteAccettate: ["farfalla"] },
+  { id: "coniglio",     emoji: "🐇", risposteAccettate: ["coniglio"] },
+  { id: "topo",         emoji: "🐭", risposteAccettate: ["topo", "topolino"] },
+  { id: "pollo",        emoji: "🐔", risposteAccettate: ["pollo", "gallina"] },
+  { id: "mela",         emoji: "🍎", risposteAccettate: ["mela"] },
+  { id: "banana",       emoji: "🍌", risposteAccettate: ["banana"] },
+  { id: "arancia",      emoji: "🍊", risposteAccettate: ["arancia"] },
+  { id: "limone",       emoji: "🍋", risposteAccettate: ["limone"] },
+  { id: "uva",          emoji: "🍇", risposteAccettate: ["uva"] },
+  { id: "fragola",      emoji: "🍓", risposteAccettate: ["fragola"] },
+  { id: "carota",       emoji: "🥕", risposteAccettate: ["carota"] },
+  { id: "pomodoro",     emoji: "🍅", risposteAccettate: ["pomodoro"] },
+  { id: "patata",       emoji: "🥔", risposteAccettate: ["patata"] },
+  { id: "macchina",     emoji: "🚗", risposteAccettate: ["macchina", "automobile", "auto"] },
+  { id: "bicicletta",   emoji: "🚲", risposteAccettate: ["bicicletta", "bici"] },
+  { id: "aereo",        emoji: "✈️", risposteAccettate: ["aereo", "aeroplano"] },
+  { id: "nave",         emoji: "🚢", risposteAccettate: ["nave", "barca"] },
+  { id: "autobus",      emoji: "🚌", risposteAccettate: ["autobus", "bus", "pullman"] },
+  { id: "treno",        emoji: "🚂", risposteAccettate: ["treno"] },
+  { id: "sedia",        emoji: "🪑", risposteAccettate: ["sedia"] },
+  { id: "letto",        emoji: "🛏️", risposteAccettate: ["letto"] },
+  { id: "porta",        emoji: "🚪", risposteAccettate: ["porta"] },
+  { id: "televisore",   emoji: "📺", risposteAccettate: ["televisore", "televisione", "tv"] },
+  { id: "telefono",     emoji: "📱", risposteAccettate: ["telefono", "cellulare", "smartphone"] },
+  { id: "libro",        emoji: "📚", risposteAccettate: ["libro"] },
+  { id: "matita",       emoji: "✏️", risposteAccettate: ["matita"] },
+  { id: "penna",        emoji: "🖊️", risposteAccettate: ["penna"] },
+  { id: "chiave",       emoji: "🔑", risposteAccettate: ["chiave"] },
+  { id: "ombrello",     emoji: "🌂", risposteAccettate: ["ombrello"] },
+  { id: "maglietta",    emoji: "👕", risposteAccettate: ["maglietta", "maglia"] },
+  { id: "pantaloni",    emoji: "👖", risposteAccettate: ["pantaloni"] },
+  { id: "scarpa",       emoji: "👟", risposteAccettate: ["scarpa", "scarpe"] },
+  { id: "cappello",     emoji: "🧢", risposteAccettate: ["cappello", "berretto"] },
+  { id: "albero",       emoji: "🌳", risposteAccettate: ["albero"] },
+  { id: "fiore",        emoji: "🌸", risposteAccettate: ["fiore"] },
+  { id: "luna",         emoji: "🌙", risposteAccettate: ["luna"] },
+  { id: "sole",         emoji: "☀️", risposteAccettate: ["sole"] },
+  { id: "stella",       emoji: "⭐", risposteAccettate: ["stella"] },
+  { id: "fuoco",        emoji: "🔥", risposteAccettate: ["fuoco", "fiamma"] },
+  { id: "neve",         emoji: "❄️", risposteAccettate: ["neve"] },
+  { id: "pizza",        emoji: "🍕", risposteAccettate: ["pizza"] },
+  { id: "pane",         emoji: "🍞", risposteAccettate: ["pane"] },
+  { id: "formaggio",    emoji: "🧀", risposteAccettate: ["formaggio"] },
+  { id: "uovo",         emoji: "🥚", risposteAccettate: ["uovo"] },
+  { id: "torta",        emoji: "🎂", risposteAccettate: ["torta", "dolce"] },
+  { id: "caffe",        emoji: "☕", risposteAccettate: ["caffè", "caffe"] },
+  { id: "casa",         emoji: "🏠", risposteAccettate: ["casa"] },
+  { id: "orologio",     emoji: "⏰", risposteAccettate: ["orologio", "sveglia"] },
+];
+
+export const POOL_FO_AU: readonly PNItem[] = [
+  { id: "volpe",        emoji: "🦊", risposteAccettate: ["volpe"] },
+  { id: "leone",        emoji: "🦁", risposteAccettate: ["leone"] },
+  { id: "elefante",     emoji: "🐘", risposteAccettate: ["elefante"] },
+  { id: "giraffa",      emoji: "🦒", risposteAccettate: ["giraffa"] },
+  { id: "delfino",      emoji: "🐬", risposteAccettate: ["delfino"] },
+  { id: "pappagallo",   emoji: "🦜", risposteAccettate: ["pappagallo"] },
+  { id: "aquila",       emoji: "🦅", risposteAccettate: ["aquila"] },
+  { id: "lucertola",    emoji: "🦎", risposteAccettate: ["lucertola"] },
+  { id: "rana",         emoji: "🐸", risposteAccettate: ["rana"] },
+  { id: "orso",         emoji: "🐻", risposteAccettate: ["orso"] },
+  { id: "scimmia",      emoji: "🐒", risposteAccettate: ["scimmia"] },
+  { id: "tartaruga",    emoji: "🐢", risposteAccettate: ["tartaruga"] },
+  { id: "ananas",       emoji: "🍍", risposteAccettate: ["ananas"] },
+  { id: "kiwi",         emoji: "🥝", risposteAccettate: ["kiwi"] },
+  { id: "mirtillo",     emoji: "🫐", risposteAccettate: ["mirtillo"] },
+  { id: "mais",         emoji: "🌽", risposteAccettate: ["mais", "granoturco"] },
+  { id: "peperone",     emoji: "🌶️", risposteAccettate: ["peperone"] },
+  { id: "aglio",        emoji: "🧄", risposteAccettate: ["aglio"] },
+  { id: "cipolla",      emoji: "🧅", risposteAccettate: ["cipolla"] },
+  { id: "avocado",      emoji: "🥑", risposteAccettate: ["avocado"] },
+  { id: "chitarra",     emoji: "🎸", risposteAccettate: ["chitarra"] },
+  { id: "pianoforte",   emoji: "🎹", risposteAccettate: ["pianoforte", "piano"] },
+  { id: "violino",      emoji: "🎻", risposteAccettate: ["violino"] },
+  { id: "tromba",       emoji: "🎺", risposteAccettate: ["tromba"] },
+  { id: "tamburo",      emoji: "🥁", risposteAccettate: ["tamburo", "batteria"] },
+  { id: "pallone",      emoji: "⚽", risposteAccettate: ["pallone", "palla"] },
+  { id: "racchetta",    emoji: "🎾", risposteAccettate: ["racchetta"] },
+  { id: "fotocamera",   emoji: "📷", risposteAccettate: ["macchina fotografica", "fotocamera"] },
+  { id: "telescopio",   emoji: "🔭", risposteAccettate: ["telescopio"] },
+  { id: "microscopio",  emoji: "🔬", risposteAccettate: ["microscopio"] },
+  { id: "martello",     emoji: "🔨", risposteAccettate: ["martello"] },
+  { id: "cacciavite",   emoji: "🪛", risposteAccettate: ["cacciavite"] },
+  { id: "sega",         emoji: "🪚", risposteAccettate: ["sega"] },
+  { id: "calamita",     emoji: "🧲", risposteAccettate: ["calamita", "magnete"] },
+  { id: "candela",      emoji: "🕯️", risposteAccettate: ["candela"] },
+  { id: "lanterna",     emoji: "🏮", risposteAccettate: ["lanterna"] },
+  { id: "ancora",       emoji: "⚓", risposteAccettate: ["ancora"] },
+  { id: "bussola",      emoji: "🧭", risposteAccettate: ["bussola"] },
+  { id: "lente",        emoji: "🔍", risposteAccettate: ["lente", "lente di ingrandimento", "lupa"] },
+  { id: "clessidra",    emoji: "⌛", risposteAccettate: ["clessidra"] },
+  { id: "fungo",        emoji: "🍄", risposteAccettate: ["fungo"] },
+  { id: "conchiglia",   emoji: "🐚", risposteAccettate: ["conchiglia"] },
+  { id: "montagna",     emoji: "⛰️", risposteAccettate: ["montagna"] },
+  { id: "vulcano",      emoji: "🌋", risposteAccettate: ["vulcano"] },
+  { id: "arcobaleno",   emoji: "🌈", risposteAccettate: ["arcobaleno"] },
+  { id: "nuvola",       emoji: "☁️", risposteAccettate: ["nuvola"] },
+  { id: "palma",        emoji: "🌴", risposteAccettate: ["palma"] },
+  { id: "foglia",       emoji: "🍃", risposteAccettate: ["foglia"] },
+  { id: "ghianda",      emoji: "🌰", risposteAccettate: ["ghianda", "castagna"] },
+  { id: "medaglia",     emoji: "🏅", risposteAccettate: ["medaglia"] },
+];
+
+// ── Synonym / Antonym Decision ─────────────────────────────────────────────────
+
+export type SARelazione = "sinonimo" | "contrario" | "non_correlato";
+
+export interface SAItem {
+  id: string;
+  target: string;
+  probe: string;
+  relazione: SARelazione;
+}
+
+export const POOL_SA_BASSA: readonly SAItem[] = [
+  // sinonimi bassa
+  { id: "sb01", target: "GRANDE",     probe: "ENORME",      relazione: "sinonimo" },
+  { id: "sb02", target: "VELOCE",     probe: "RAPIDO",      relazione: "sinonimo" },
+  { id: "sb03", target: "BELLO",      probe: "CARINO",      relazione: "sinonimo" },
+  { id: "sb04", target: "PICCOLO",    probe: "MINUSCOLO",   relazione: "sinonimo" },
+  { id: "sb05", target: "FELICE",     probe: "CONTENTO",    relazione: "sinonimo" },
+  { id: "sb06", target: "TRISTE",     probe: "MALINCONICO", relazione: "sinonimo" },
+  { id: "sb07", target: "FACILE",     probe: "SEMPLICE",    relazione: "sinonimo" },
+  { id: "sb08", target: "DIFFICILE",  probe: "ARDUO",       relazione: "sinonimo" },
+  { id: "sb09", target: "BUONO",      probe: "OTTIMO",      relazione: "sinonimo" },
+  { id: "sb10", target: "FORTE",      probe: "ROBUSTO",     relazione: "sinonimo" },
+  { id: "sb11", target: "STANCO",     probe: "AFFATICATO",  relazione: "sinonimo" },
+  { id: "sb12", target: "ANTICO",     probe: "VECCHIO",     relazione: "sinonimo" },
+  { id: "sb13", target: "PAURA",      probe: "SPAVENTO",    relazione: "sinonimo" },
+  { id: "sb14", target: "INIZIO",     probe: "PARTENZA",    relazione: "sinonimo" },
+  { id: "sb15", target: "CASA",       probe: "ABITAZIONE",  relazione: "sinonimo" },
+  // contrari bassa
+  { id: "cb01", target: "GRANDE",     probe: "PICCOLO",     relazione: "contrario" },
+  { id: "cb02", target: "VELOCE",     probe: "LENTO",       relazione: "contrario" },
+  { id: "cb03", target: "BELLO",      probe: "BRUTTO",      relazione: "contrario" },
+  { id: "cb04", target: "CALDO",      probe: "FREDDO",      relazione: "contrario" },
+  { id: "cb05", target: "ALTO",       probe: "BASSO",       relazione: "contrario" },
+  { id: "cb06", target: "LUNGO",      probe: "CORTO",       relazione: "contrario" },
+  { id: "cb07", target: "NUOVO",      probe: "VECCHIO",     relazione: "contrario" },
+  { id: "cb08", target: "FORTE",      probe: "DEBOLE",      relazione: "contrario" },
+  { id: "cb09", target: "RICCO",      probe: "POVERO",      relazione: "contrario" },
+  { id: "cb10", target: "FELICE",     probe: "TRISTE",      relazione: "contrario" },
+  { id: "cb11", target: "CHIARO",     probe: "SCURO",       relazione: "contrario" },
+  { id: "cb12", target: "APERTO",     probe: "CHIUSO",      relazione: "contrario" },
+  { id: "cb13", target: "PIENO",      probe: "VUOTO",       relazione: "contrario" },
+  { id: "cb14", target: "LEGGERO",    probe: "PESANTE",     relazione: "contrario" },
+  { id: "cb15", target: "DOLCE",      probe: "AMARO",       relazione: "contrario" },
+  // non correlati bassa (chiaramente distanti)
+  { id: "nb01", target: "GRANDE",     probe: "VELOCE",      relazione: "non_correlato" },
+  { id: "nb02", target: "FREDDO",     probe: "ALTO",        relazione: "non_correlato" },
+  { id: "nb03", target: "BELLO",      probe: "FORTE",       relazione: "non_correlato" },
+  { id: "nb04", target: "NUOVO",      probe: "LEGGERO",     relazione: "non_correlato" },
+  { id: "nb05", target: "FELICE",     probe: "PICCOLO",     relazione: "non_correlato" },
+  { id: "nb06", target: "TRISTE",     probe: "LONTANO",     relazione: "non_correlato" },
+  { id: "nb07", target: "BUONO",      probe: "LUNGO",       relazione: "non_correlato" },
+  { id: "nb08", target: "CALDO",      probe: "GIOVANE",     relazione: "non_correlato" },
+  { id: "nb09", target: "RICCO",      probe: "CHIARO",      relazione: "non_correlato" },
+  { id: "nb10", target: "ALTO",       probe: "DOLCE",       relazione: "non_correlato" },
+  { id: "nb11", target: "VECCHIO",    probe: "PIENO",       relazione: "non_correlato" },
+  { id: "nb12", target: "LUNGO",      probe: "VIVO",        relazione: "non_correlato" },
+  { id: "nb13", target: "BASSO",      probe: "AMARO",       relazione: "non_correlato" },
+  { id: "nb14", target: "LEGGERO",    probe: "APERTO",      relazione: "non_correlato" },
+  { id: "nb15", target: "DURO",       probe: "TRISTE",      relazione: "non_correlato" },
+];
+
+export const POOL_SA_MEDIA: readonly SAItem[] = [
+  // sinonimi media (meno frequenti)
+  { id: "sm01", target: "ARDITO",     probe: "CORAGGIOSO",  relazione: "sinonimo" },
+  { id: "sm02", target: "CELERE",     probe: "RAPIDO",      relazione: "sinonimo" },
+  { id: "sm03", target: "DILIGENTE",  probe: "LABORIOSO",   relazione: "sinonimo" },
+  { id: "sm04", target: "QUIETO",     probe: "TRANQUILLO",  relazione: "sinonimo" },
+  { id: "sm05", target: "VASTO",      probe: "AMPIO",       relazione: "sinonimo" },
+  { id: "sm06", target: "LIETO",      probe: "GIOIOSO",     relazione: "sinonimo" },
+  { id: "sm07", target: "PERSPICACE", probe: "ACUTO",       relazione: "sinonimo" },
+  { id: "sm08", target: "MITE",       probe: "GENTILE",     relazione: "sinonimo" },
+  { id: "sm09", target: "ASSIDUO",    probe: "COSTANTE",    relazione: "sinonimo" },
+  { id: "sm10", target: "LUCIDO",     probe: "CHIARO",      relazione: "sinonimo" },
+  { id: "sm11", target: "FRAGILE",    probe: "DELICATO",    relazione: "sinonimo" },
+  { id: "sm12", target: "NITIDO",     probe: "PRECISO",     relazione: "sinonimo" },
+  { id: "sm13", target: "TESO",       probe: "NERVOSO",     relazione: "sinonimo" },
+  { id: "sm14", target: "FERMO",      probe: "STABILE",     relazione: "sinonimo" },
+  { id: "sm15", target: "FITTO",      probe: "DENSO",       relazione: "sinonimo" },
+  { id: "sm16", target: "CURVO",      probe: "PIEGATO",     relazione: "sinonimo" },
+  { id: "sm17", target: "INERTE",     probe: "IMMOBILE",    relazione: "sinonimo" },
+  { id: "sm18", target: "PALLIDO",    probe: "SBIADITO",    relazione: "sinonimo" },
+  // contrari media (meno ovvi)
+  { id: "cm01", target: "MODESTO",    probe: "ARROGANTE",   relazione: "contrario" },
+  { id: "cm02", target: "PRUDENTE",   probe: "IMPULSIVO",   relazione: "contrario" },
+  { id: "cm03", target: "SINCERO",    probe: "FALSO",       relazione: "contrario" },
+  { id: "cm04", target: "GENEROSO",   probe: "AVARO",       relazione: "contrario" },
+  { id: "cm05", target: "PAZIENTE",   probe: "IMPAZIENTE",  relazione: "contrario" },
+  { id: "cm06", target: "CORAGGIOSO", probe: "VIGLIACCO",   relazione: "contrario" },
+  { id: "cm07", target: "ONESTO",     probe: "DISONESTO",   relazione: "contrario" },
+  { id: "cm08", target: "OPACO",      probe: "TRASPARENTE", relazione: "contrario" },
+  { id: "cm09", target: "RIGIDO",     probe: "FLESSIBILE",  relazione: "contrario" },
+  { id: "cm10", target: "FEDELE",     probe: "TRADITORE",   relazione: "contrario" },
+  { id: "cm11", target: "PRECISO",    probe: "IMPRECISO",   relazione: "contrario" },
+  { id: "cm12", target: "ORDINATO",   probe: "DISORDINATO", relazione: "contrario" },
+  { id: "cm13", target: "SOBRIO",     probe: "ECCESSIVO",   relazione: "contrario" },
+  { id: "cm14", target: "FRUGALE",    probe: "PRODIGO",     relazione: "contrario" },
+  { id: "cm15", target: "ELOQUENTE",  probe: "MUTISMO",     relazione: "contrario" },
+  { id: "cm16", target: "ACUTO",      probe: "OTTUSO",      relazione: "contrario" },
+  { id: "cm17", target: "CONCISO",    probe: "PROLISSO",    relazione: "contrario" },
+  { id: "cm18", target: "AUDACE",     probe: "TIMIDO",      relazione: "contrario" },
+  // non correlati media (dalla stessa area semantica)
+  { id: "nm01", target: "VELOCE",     probe: "PESANTE",     relazione: "non_correlato" },
+  { id: "nm02", target: "FREDDO",     probe: "DURO",        relazione: "non_correlato" },
+  { id: "nm03", target: "GRANDE",     probe: "LUMINOSO",    relazione: "non_correlato" },
+  { id: "nm04", target: "FORTE",      probe: "ALTO",        relazione: "non_correlato" },
+  { id: "nm05", target: "BUONO",      probe: "BELLO",       relazione: "non_correlato" },
+  { id: "nm06", target: "DOLCE",      probe: "MORBIDO",     relazione: "non_correlato" },
+  { id: "nm07", target: "LUNGO",      probe: "SPESSO",      relazione: "non_correlato" },
+  { id: "nm08", target: "QUIETO",     probe: "LENTO",       relazione: "non_correlato" },
+  { id: "nm09", target: "CHIARO",     probe: "LEGGERO",     relazione: "non_correlato" },
+  { id: "nm10", target: "DILIGENTE",  probe: "PAZIENTE",    relazione: "non_correlato" },
+  { id: "nm11", target: "CORAGGIOSO", probe: "GENEROSO",    relazione: "non_correlato" },
+  { id: "nm12", target: "SINCERO",    probe: "MODESTO",     relazione: "non_correlato" },
+  { id: "nm13", target: "ACUTO",      probe: "RAPIDO",      relazione: "non_correlato" },
+  { id: "nm14", target: "FERMO",      probe: "SERIO",       relazione: "non_correlato" },
+  { id: "nm15", target: "VASTO",      probe: "PROFONDO",    relazione: "non_correlato" },
+  { id: "nm16", target: "NITIDO",     probe: "PULITO",      relazione: "non_correlato" },
+  { id: "nm17", target: "PALLIDO",    probe: "FRAGILE",     relazione: "non_correlato" },
+  { id: "nm18", target: "TESO",       probe: "DIFFICILE",   relazione: "non_correlato" },
+];

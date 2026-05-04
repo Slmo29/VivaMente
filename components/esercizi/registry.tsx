@@ -17,6 +17,8 @@ import { SESSION_TIMER_MS as SI_TIMER_MS } from "./families/sort-it/levels";
 import { RecallGridMBTTaskEngine } from "./families/recall-grid/RecallGridMBTTaskEngine";
 import { RecallGridMLTTaskEngine } from "./families/recall-grid/RecallGridMLTTaskEngine";
 import { getRecallGridMBTLevel } from "./families/recall-grid/levels";
+import { LinguaggioDenominazioneTaskEngine } from "./families/linguaggio-denominazione/LinguaggioDenominazioneTaskEngine";
+import { SESSION_TIMER_MS as LD_TIMER_MS } from "./families/linguaggio-denominazione/levels";
 
 // ── Wrapper inline per Recall Grid MBT (discrimina stimulusType) ─────────────
 
@@ -141,6 +143,16 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
     getSessionDurationMs: () => ST_TIMER_MS,
   },
 
+  // ── Famiglia 20: Linguaggio e Denominazione (Modello A — timer 90s) ─────────
+  picture_naming: {
+    Engine: LinguaggioDenominazioneTaskEngine,
+    getSessionDurationMs: () => LD_TIMER_MS,
+  },
+  synonym_antonym_decision: {
+    Engine: LinguaggioDenominazioneTaskEngine,
+    getSessionDurationMs: () => LD_TIMER_MS,
+  },
+
   // ── Da aggiungere progressivamente (una entry per id JSON del catalogo) ──
   // sequence_tap_numeri_forward:           { Engine: SequenceTapEngine,           getSessionDurationMs: () => null },
   // sequence_tap_numeri_backward:          { Engine: SequenceTapEngine,           getSessionDurationMs: () => null },
@@ -164,8 +176,6 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
   // memoria_lista_immagini_riconoscimento: { Engine: MemoriaListaEngine,          getSessionDurationMs: () => null },
   // go_nogo_semantico:                      { Engine: GoNogoTaskEngine,            getSessionDurationMs: () => null },
   // go_nogo_semantico:                     { Engine: GoNoGoEngine,                getSessionDurationMs: (l) => getGoNoGoLevel(l).sessionDurationMs },
-  // picture_naming:                        { Engine: LinguaggioDenominazioneEngine, getSessionDurationMs: () => null },
-  // synonym_antonym_decision:              { Engine: LinguaggioDenominazioneEngine, getSessionDurationMs: () => null },
   // path_tracing:                          { Engine: PathTracingEngine,           getSessionDurationMs: () => null },
   // cultura_generale:                      { Engine: ConoscenzaGeneraleEngine,    getSessionDurationMs: () => null },
   // word_chain_alfabetico:                 { Engine: WordChainEngine,             getSessionDurationMs: () => null },
