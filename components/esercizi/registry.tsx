@@ -27,6 +27,8 @@ import { UpdatingWMTaskEngine } from "./families/updating-wm/UpdatingWMTaskEngin
 import { SESSION_TIMER_MS as UWM_TIMER_MS } from "./families/updating-wm/levels";
 import { WordChainTaskEngine } from "./families/word-chain/WordChainTaskEngine";
 import { SESSION_TIMER_MS as WC_TIMER_MS } from "./families/word-chain/levels";
+import { WordChainSwitchingTaskEngine } from "./families/word-chain-switching/WordChainSwitchingTaskEngine";
+import { SESSION_TIMER_MS as WCS_TIMER_MS } from "./families/word-chain-switching/levels";
 
 // ── Wrapper inline per Recall Grid MBT (discrimina stimulusType) ─────────────
 
@@ -181,6 +183,12 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
   word_chain_alfabetico: {
     Engine: WordChainTaskEngine,
     getSessionDurationMs: () => WC_TIMER_MS,
+  },
+
+  // ── Word Chain Switching (Modello A — timer 90s) ──────────────────────────
+  word_chain_switching_categoriale: {
+    Engine: WordChainSwitchingTaskEngine,
+    getSessionDurationMs: () => WCS_TIMER_MS,
   },
 
   // ── Famiglia 20: Linguaggio e Denominazione (Modello A — timer 90s) ─────────
