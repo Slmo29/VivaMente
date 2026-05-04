@@ -22,6 +22,7 @@ import {
   type MLVariante,
 } from "./sequence";
 import { MemoriaListaSession } from "./MemoriaListaSession";
+import { MemoriaListaRievocazioneParoleSession } from "./MemoriaListaRievocazioneParoleSession";
 import { BouncingBall } from "@/components/esercizi/shared/distrattore-palla/BouncingBall";
 
 export function MemoriaListaTaskEngine({
@@ -35,10 +36,13 @@ export function MemoriaListaTaskEngine({
   esercizioId,
 }: GameEngineProps) {
 
-  // rievocazione_immagini usa variante "immagini" ma con foil più numerosi
-  const isRievocazione = esercizioId === "memoria_lista_immagini_rievocazione";
-  const variante: MLVariante =
-    esercizioId === "memoria_lista_parole_riconoscimento" ? "parole" : "immagini";
+  const isRievocazioneImmagini = esercizioId === "memoria_lista_immagini_rievocazione";
+  const isRievocazioneParole  = esercizioId === "memoria_lista_parole_rievocazione";
+  const variante: MLVariante  =
+    esercizioId === "memoria_lista_immagini_riconoscimento" ||
+    esercizioId === "memoria_lista_immagini_rievocazione"
+      ? "immagini"
+      : "parole";
 
   const config  = getMLLevel(livello);
   const rngRef  = useRef<() => number>(Math.random);
@@ -63,10 +67,12 @@ export function MemoriaListaTaskEngine({
         ? Math.max(config.nItems, ctx.valoreCorrente)
         : config.nItems;
 
-      // rievocazione: griglia più affollata (nItems × 3, max 24)
-      const nFoil = isRievocazione
-        ? Math.min(nItems * 3, 24)
-        : config.nFoil;
+      // rievocazione immagini: griglia più affollata; rievocazione parole: nessun foil
+      const nFoil = isRievocazioneParole
+        ? 0
+        : isRievocazioneImmagini
+          ? Math.min(nItems * 3, 24)
+          : config.nFoil;
 
       return generaStimoloML(
         nItems,
@@ -78,7 +84,7 @@ export function MemoriaListaTaskEngine({
         rngRef.current,
       );
     },
-    [config, variante, isRievocazione],
+    [config, variante, isRievocazioneParole, isRievocazioneImmagini],
   );
 
   // ── valutaRisposta (strict: tutti i target, nessun foil) ──────────────────
@@ -129,21 +135,39 @@ export function MemoriaListaTaskEngine({
     (props: {
       stimolo: StimoloML;
       onRisposta: (risposta: RispostaML) => void;
-    }) => (
-      <MemoriaListaSession
-        stimolo={props.stimolo}
-        onRisposta={props.onRisposta}
-        tempoScaduto={tempoScaduto}
-        delayComponent={({ onCompleto }) => (
-          <BouncingBall
-            durataMs={props.stimolo.delayMs}
-            onCompleto={onCompleto}
-            mostraCountdown
+    }) => {
+      if (isRievocazioneParole) {
+        return (
+          <MemoriaListaRievocazioneParoleSession
+            stimolo={props.stimolo}
+            onRisposta={props.onRisposta}
+            tempoScaduto={tempoScaduto}
+            delayComponent={({ onCompleto }) => (
+              <BouncingBall
+                durataMs={props.stimolo.delayMs}
+                onCompleto={onCompleto}
+                mostraCountdown
+              />
+            )}
           />
-        )}
-      />
-    ),
-    [tempoScaduto],
+        );
+      }
+      return (
+        <MemoriaListaSession
+          stimolo={props.stimolo}
+          onRisposta={props.onRisposta}
+          tempoScaduto={tempoScaduto}
+          delayComponent={({ onCompleto }) => (
+            <BouncingBall
+              durataMs={props.stimolo.delayMs}
+              onCompleto={onCompleto}
+              mostraCountdown
+            />
+          )}
+        />
+      );
+    },
+    [tempoScaduto, isRievocazioneParole],
   );
 
   // ── onCompleteWrapped — accuratezza per item ───────────────────────────────
@@ -169,12 +193,16 @@ export function MemoriaListaTaskEngine({
   const tutorial: TutorialConfig | null = mostraTutorial
     ? {
         pagine: [{
-          titolo: variante === "immagini" ? "Memorizza le immagini" : "Memorizza le parole",
-          testo: isRievocazione
-            ? "Guarda le immagini che appaiono una alla volta. Dopo una breve pausa vedrai una griglia con molte immagini: tocca solo quelle che hai visto prima, poi premi Conferma."
-            : variante === "immagini"
-              ? "Guarda le immagini che appaiono una alla volta. Dopo una breve pausa vedrai una griglia: tocca tutte le immagini che hai visto prima, poi premi Conferma."
-              : "Leggi le parole che appaiono una alla volta. Dopo una breve pausa vedrai una griglia: tocca tutte le parole che hai visto prima, poi premi Conferma.",
+          titolo: isRievocazioneParole
+            ? "Memorizza le parole"
+            : variante === "immagini" ? "Memorizza le immagini" : "Memorizza le parole",
+          testo: isRievocazioneParole
+            ? "Leggi le parole che appaiono una alla volta. Dopo una breve pausa farai una piccola attività, poi dovrai scrivere tutte le parole che ricordi. Puoi inserirle in qualsiasi ordine."
+            : isRievocazioneImmagini
+              ? "Guarda le immagini che appaiono una alla volta. Dopo una breve pausa vedrai una griglia con molte immagini: tocca solo quelle che hai visto prima, poi premi Conferma."
+              : variante === "immagini"
+                ? "Guarda le immagini che appaiono una alla volta. Dopo una breve pausa vedrai una griglia: tocca tutte le immagini che hai visto prima, poi premi Conferma."
+                : "Leggi le parole che appaiono una alla volta. Dopo una breve pausa vedrai una griglia: tocca tutte le parole che hai visto prima, poi premi Conferma.",
         }],
       }
     : null;

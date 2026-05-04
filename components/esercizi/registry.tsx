@@ -253,6 +253,10 @@ export const ENGINE_REGISTRY: Record<string, FamilyEntry> = {
     Engine: MemoriaListaTaskEngine,
     getSessionDurationMs: () => null,
   },
+  memoria_lista_parole_rievocazione: {
+    Engine: MemoriaListaTaskEngine,
+    getSessionDurationMs: () => null,
+  },
 
   // ── Famiglia 20: Linguaggio e Denominazione (Modello A — timer 90s) ─────────
   picture_naming: {
