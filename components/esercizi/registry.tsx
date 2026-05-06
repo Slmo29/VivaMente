@@ -16,7 +16,6 @@ import { SortItTaskEngine } from "./families/sort-it/SortItTaskEngine";
 import { SESSION_TIMER_MS as SI_TIMER_MS } from "./families/sort-it/levels";
 import { RecallGridMBTTaskEngine } from "./families/recall-grid/RecallGridMBTTaskEngine";
 import { RecallGridMLTTaskEngine } from "./families/recall-grid/RecallGridMLTTaskEngine";
-import { getRecallGridMBTLevel } from "./families/recall-grid/levels";
 import { LinguaggioDenominazioneTaskEngine } from "./families/linguaggio-denominazione/LinguaggioDenominazioneTaskEngine";
 import { SESSION_TIMER_MS as LD_TIMER_MS } from "./families/linguaggio-denominazione/levels";
 import { CulturaGeneraleTaskEngine } from "./families/conoscenza-generale/CulturaGeneraleTaskEngine";
