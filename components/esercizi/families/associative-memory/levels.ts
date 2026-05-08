@@ -17,16 +17,16 @@ export interface AMLevelConfig {
 }
 
 export const AM_LEVELS: readonly AMLevelConfig[] = [
-  { livello:  1, nCoppie: 2, speedMs: 3000, delayMs:  30_000, trialsPerSession: 5 },
-  { livello:  2, nCoppie: 2, speedMs: 2800, delayMs:  30_000, trialsPerSession: 5 },
-  { livello:  3, nCoppie: 3, speedMs: 2800, delayMs:  30_000, trialsPerSession: 5 },
-  { livello:  4, nCoppie: 3, speedMs: 2500, delayMs:  30_000, trialsPerSession: 5 },
-  { livello:  5, nCoppie: 3, speedMs: 2500, delayMs:  60_000, trialsPerSession: 4 },
-  { livello:  6, nCoppie: 4, speedMs: 2200, delayMs:  60_000, trialsPerSession: 4 },
-  { livello:  7, nCoppie: 4, speedMs: 2200, delayMs:  60_000, trialsPerSession: 4 },
-  { livello:  8, nCoppie: 4, speedMs: 2000, delayMs:  60_000, trialsPerSession: 4 },
-  { livello:  9, nCoppie: 5, speedMs: 2000, delayMs:  90_000, trialsPerSession: 3 },
-  { livello: 10, nCoppie: 5, speedMs: 1800, delayMs:  90_000, trialsPerSession: 3 },
+  { livello:  1, nCoppie: 2, speedMs: 3000, delayMs:  10_000, trialsPerSession: 5 },
+  { livello:  2, nCoppie: 2, speedMs: 2800, delayMs:  10_000, trialsPerSession: 5 },
+  { livello:  3, nCoppie: 3, speedMs: 2800, delayMs:  10_000, trialsPerSession: 5 },
+  { livello:  4, nCoppie: 3, speedMs: 2500, delayMs:  10_000, trialsPerSession: 5 },
+  { livello:  5, nCoppie: 3, speedMs: 2500, delayMs:  20_000, trialsPerSession: 4 },
+  { livello:  6, nCoppie: 4, speedMs: 2200, delayMs:  20_000, trialsPerSession: 4 },
+  { livello:  7, nCoppie: 4, speedMs: 2200, delayMs:  20_000, trialsPerSession: 4 },
+  { livello:  8, nCoppie: 4, speedMs: 2000, delayMs:  20_000, trialsPerSession: 4 },
+  { livello:  9, nCoppie: 5, speedMs: 2000, delayMs:  30_000, trialsPerSession: 3 },
+  { livello: 10, nCoppie: 5, speedMs: 1800, delayMs:  30_000, trialsPerSession: 3 },
 ];
 
 export const AM_MICRO_DELTA    = 1;
@@ -41,10 +41,10 @@ export function getAMMechanicWarning(
   livelloCorrente: number,
 ): { titolo: string; testo: string } | null {
   if (livelloPrec === 4 && livelloCorrente === 5) {
-    return { titolo: "Cambio difficoltà", testo: "Da questo livello il tempo di attesa tra memorizzazione e domande aumenta a 1 minuto." };
+    return { titolo: "Cambio difficoltà", testo: "Da questo livello il tempo di attesa tra memorizzazione e domande aumenta a 20 secondi." };
   }
   if (livelloPrec === 8 && livelloCorrente === 9) {
-    return { titolo: "Cambio difficoltà", testo: "Da questo livello il tempo di attesa aumenta a 1 minuto e 30 secondi." };
+    return { titolo: "Cambio difficoltà", testo: "Da questo livello il tempo di attesa aumenta a 30 secondi." };
   }
   return null;
 }

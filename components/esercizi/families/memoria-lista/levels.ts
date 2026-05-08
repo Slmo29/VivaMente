@@ -21,16 +21,16 @@ export interface MLLevelConfig {
 }
 
 export const ML_LEVELS: readonly MLLevelConfig[] = [
-  { livello:  1, nItems: 4, speedMs: 2000, delayMs:  30_000, nFoil: 4, trialsPerSession: 5 },
-  { livello:  2, nItems: 4, speedMs: 2000, delayMs:  30_000, nFoil: 4, trialsPerSession: 5 },
-  { livello:  3, nItems: 5, speedMs: 1800, delayMs:  30_000, nFoil: 4, trialsPerSession: 4 },
-  { livello:  4, nItems: 5, speedMs: 1800, delayMs:  30_000, nFoil: 4, trialsPerSession: 4 },
-  { livello:  5, nItems: 6, speedMs: 1600, delayMs:  60_000, nFoil: 6, trialsPerSession: 4 },
-  { livello:  6, nItems: 6, speedMs: 1600, delayMs:  60_000, nFoil: 6, trialsPerSession: 4 },
-  { livello:  7, nItems: 7, speedMs: 1500, delayMs:  60_000, nFoil: 6, trialsPerSession: 3 },
-  { livello:  8, nItems: 7, speedMs: 1500, delayMs:  60_000, nFoil: 6, trialsPerSession: 3 },
-  { livello:  9, nItems: 8, speedMs: 1400, delayMs:  90_000, nFoil: 8, trialsPerSession: 3 },
-  { livello: 10, nItems: 8, speedMs: 1400, delayMs:  90_000, nFoil: 8, trialsPerSession: 3 },
+  { livello:  1, nItems: 4, speedMs: 2000, delayMs:  10_000, nFoil: 4, trialsPerSession: 5 },
+  { livello:  2, nItems: 4, speedMs: 2000, delayMs:  10_000, nFoil: 4, trialsPerSession: 5 },
+  { livello:  3, nItems: 5, speedMs: 1800, delayMs:  10_000, nFoil: 4, trialsPerSession: 4 },
+  { livello:  4, nItems: 5, speedMs: 1800, delayMs:  10_000, nFoil: 4, trialsPerSession: 4 },
+  { livello:  5, nItems: 6, speedMs: 1600, delayMs:  20_000, nFoil: 6, trialsPerSession: 4 },
+  { livello:  6, nItems: 6, speedMs: 1600, delayMs:  20_000, nFoil: 6, trialsPerSession: 4 },
+  { livello:  7, nItems: 7, speedMs: 1500, delayMs:  20_000, nFoil: 6, trialsPerSession: 3 },
+  { livello:  8, nItems: 7, speedMs: 1500, delayMs:  20_000, nFoil: 6, trialsPerSession: 3 },
+  { livello:  9, nItems: 8, speedMs: 1400, delayMs:  30_000, nFoil: 8, trialsPerSession: 3 },
+  { livello: 10, nItems: 8, speedMs: 1400, delayMs:  30_000, nFoil: 8, trialsPerSession: 3 },
 ];
 
 export const ML_MICRO_DELTA    = 1;
@@ -45,10 +45,10 @@ export function getMLMechanicWarning(
   livelloCorrente: number,
 ): { titolo: string; testo: string } | null {
   if (livelloPrec === 4 && livelloCorrente === 5) {
-    return { titolo: "Cambio difficoltà", testo: "Da questo livello il tempo di attesa tra la lista e il riconoscimento aumenta a 1 minuto." };
+    return { titolo: "Cambio difficoltà", testo: "Da questo livello il tempo di attesa tra la lista e il riconoscimento aumenta a 20 secondi." };
   }
   if (livelloPrec === 8 && livelloCorrente === 9) {
-    return { titolo: "Cambio difficoltà", testo: "Da questo livello il tempo di attesa aumenta a 1 minuto e 30 secondi." };
+    return { titolo: "Cambio difficoltà", testo: "Da questo livello il tempo di attesa aumenta a 30 secondi." };
   }
   return null;
 }

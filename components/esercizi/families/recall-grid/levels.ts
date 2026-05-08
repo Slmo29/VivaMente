@@ -155,40 +155,37 @@ export const RECALL_GRID_MBT_LEVELS: readonly RecallGridMBTLevelConfig[] = [
  *   "2 min"    → 120
  *   "3 min"    → 180
  *
- * Allineamento con shared/04-memory-types.md tabella delay MLT (riga 14):
- *   lv 1–4   → 30s
- *   lv 5–8   → 60s (1min)
- *   lv 9–12  → 90s (1m30s)
- *   lv 13–16 → 120s (2min)
- *   lv 17–20 → 180s (3min)
- * Allineamento perfetto. ✓
+ * Delay ridotto a 1/3 rispetto al GDD originale (decisione di prodotto):
+ *   lv 1–4   → 10s
+ *   lv 5–8   → 20s
+ *   lv 9–10  → 30s
  *
  * Note GDD (riga 133):
  *   - max gridSize 5×5 (mai 6×6 — carico complessivo eccessivo per 60+ con delay lungo).
  *   - max nStimuli 7 (vs 10 MBT).
  *
  * Verifica a campione:
- *   lv 1  → 3x3, 2 stim, 3500ms exp, 30s delay, 5 trial
- *   lv 5  → cambio delay 30s → 60s
+ *   lv 1  → 3x3, 2 stim, 3500ms exp, 10s delay, 5 trial
+ *   lv 5  → cambio delay 10s → 20s
  *   lv 13 → 5x5 (cambio griglia) + delay 120s
  *   lv 15 → introduzione T.Lim retrieval 30000ms
  *   lv 17 → delay 120s → 180s
  *   lv 20 → 5x5, 7 stim, 1500ms exp, 180s delay, 20000ms tLim repr, 2 trial
  */
 export const RECALL_GRID_MLT_LEVELS: readonly RecallGridMLTLevelConfig[] = [
-  { livello:  1, tipo: "mlt", gridSize: "3x3", nStimuli: 2, exposureMs: 3500, delayS: 30, tLimReproMs: null, trialsPerSession: 5 },
-  { livello:  2, tipo: "mlt", gridSize: "3x3", nStimuli: 2, exposureMs: 3500, delayS: 30, tLimReproMs: null, trialsPerSession: 5 },
-  { livello:  3, tipo: "mlt", gridSize: "3x3", nStimuli: 3, exposureMs: 3200, delayS: 30, tLimReproMs: null, trialsPerSession: 5 },
-  { livello:  4, tipo: "mlt", gridSize: "3x3", nStimuli: 3, exposureMs: 3200, delayS: 30, tLimReproMs: null, trialsPerSession: 5 },
-  // ── Lv 5: delay 30s → 60s (warning) ──
-  { livello:  5, tipo: "mlt", gridSize: "3x3", nStimuli: 3, exposureMs: 3000, delayS: 60, tLimReproMs: null, trialsPerSession: 3 },
+  { livello:  1, tipo: "mlt", gridSize: "3x3", nStimuli: 2, exposureMs: 3500, delayS: 10, tLimReproMs: null, trialsPerSession: 5 },
+  { livello:  2, tipo: "mlt", gridSize: "3x3", nStimuli: 2, exposureMs: 3500, delayS: 10, tLimReproMs: null, trialsPerSession: 5 },
+  { livello:  3, tipo: "mlt", gridSize: "3x3", nStimuli: 3, exposureMs: 3200, delayS: 10, tLimReproMs: null, trialsPerSession: 5 },
+  { livello:  4, tipo: "mlt", gridSize: "3x3", nStimuli: 3, exposureMs: 3200, delayS: 10, tLimReproMs: null, trialsPerSession: 5 },
+  // ── Lv 5: delay 10s → 20s (warning) ──
+  { livello:  5, tipo: "mlt", gridSize: "3x3", nStimuli: 3, exposureMs: 3000, delayS: 20, tLimReproMs: null, trialsPerSession: 3 },
   // ── Lv 6: cambio griglia 3×3 → 4×4 ──
-  { livello:  6, tipo: "mlt", gridSize: "4x4", nStimuli: 3, exposureMs: 3000, delayS: 60, tLimReproMs: null, trialsPerSession: 3 },
-  { livello:  7, tipo: "mlt", gridSize: "4x4", nStimuli: 4, exposureMs: 2900, delayS: 60, tLimReproMs: null, trialsPerSession: 3 },
-  { livello:  8, tipo: "mlt", gridSize: "4x4", nStimuli: 4, exposureMs: 2900, delayS: 60, tLimReproMs: null, trialsPerSession: 3 },
-  // ── Lv 9: delay 60s → 90s ──
-  { livello:  9, tipo: "mlt", gridSize: "4x4", nStimuli: 4, exposureMs: 2800, delayS: 90, tLimReproMs: null, trialsPerSession: 2 },
-  { livello: 10, tipo: "mlt", gridSize: "4x4", nStimuli: 4, exposureMs: 2800, delayS: 90, tLimReproMs: null, trialsPerSession: 2 },
+  { livello:  6, tipo: "mlt", gridSize: "4x4", nStimuli: 3, exposureMs: 3000, delayS: 20, tLimReproMs: null, trialsPerSession: 3 },
+  { livello:  7, tipo: "mlt", gridSize: "4x4", nStimuli: 4, exposureMs: 2900, delayS: 20, tLimReproMs: null, trialsPerSession: 3 },
+  { livello:  8, tipo: "mlt", gridSize: "4x4", nStimuli: 4, exposureMs: 2900, delayS: 20, tLimReproMs: null, trialsPerSession: 3 },
+  // ── Lv 9: delay 20s → 30s ──
+  { livello:  9, tipo: "mlt", gridSize: "4x4", nStimuli: 4, exposureMs: 2800, delayS: 30, tLimReproMs: null, trialsPerSession: 2 },
+  { livello: 10, tipo: "mlt", gridSize: "4x4", nStimuli: 4, exposureMs: 2800, delayS: 30, tLimReproMs: null, trialsPerSession: 2 },
 ] as const;
 
 // ── Lookup livelli con clamp ─────────────────────────────────────────────────
