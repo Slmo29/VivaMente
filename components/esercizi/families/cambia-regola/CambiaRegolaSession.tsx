@@ -77,12 +77,6 @@ function cartaRandom(): Carta {
   return { colore: pick(COLORI), forma: pick(FORME), numero: pick(NUMERI) };
 }
 
-function valoreDim(c: Carta, d: Dimensione): Colore | Forma | Numero {
-  if (d === "colore") return c.colore;
-  if (d === "forma")  return c.forma;
-  return c.numero;
-}
-
 /**
  * Costruisce un trial:
  *   - target sinistro e destro distinti sulla DIMENSIONE attiva
